@@ -119,7 +119,7 @@ app.get('/missions', (req, res) => {
 app.use(express.static(path.join(__dirname, '../../client/dist')));
 
 // API 이외의 모든 경로는 클라이언트의 index.html로 연결 (SPA)
-app.get('*', (req, res) => {
+app.get('/*', (req: any, res: any) => {
   res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
 });
 
