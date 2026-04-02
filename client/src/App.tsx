@@ -13,7 +13,7 @@ interface Mission {
   count: number;
 }
 
-const SOCKET_URL = 'http://localhost:4000';
+const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
 
 const App: React.FC = () => {
   const [missions, setMissions] = useState<Mission[]>([]);

@@ -4,8 +4,12 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { ChzzkClient } from 'chzzk';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(cors());
@@ -14,7 +18,10 @@ app.use(express.json());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
+    origin: [
+      'http://localhost:5173',
+      'https://chatbot-pbp5-n56phycym-narasaki.vercel.app'
+    ],
     methods: ['GET', 'POST']
   }
 });
@@ -105,6 +112,15 @@ async function setupChzzk() {
 // API 엔드포인트
 app.get('/missions', (req, res) => {
   res.json(missions);
+});
+
+// 정적 파일 서빙 (Client Build) - Render 배포용
+// client 폴더와 server 폴더가 같은 ChatTool 안에 있다고 가정 (../../client/dist)
+app.use(express.static(path.join(__dirname, '../../client/dist')));
+
+// API 이외의 모든 경로는 클라이언트의 index.html로 연결 (SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
 });
 
 app.delete('/missions/:id', (req, res) => {
