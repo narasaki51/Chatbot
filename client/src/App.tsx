@@ -47,7 +47,7 @@ const LoginPage: React.FC<{ onSuccess: (user: UserAuth) => void }> = ({ onSucces
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserAuth | null>(null);
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot'>('dashboard');
   const [missions, setMissions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -124,6 +124,7 @@ const App: React.FC = () => {
             <div style={{ width: '1px', background: '#333', margin: '0 5px' }}></div>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+            <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
           </div>
         )}
 
@@ -163,6 +164,8 @@ const App: React.FC = () => {
           <GroupMissionBoard key="grp-board-last" missions={missions} onUpdate={updateStatus} onDelete={deleteMission} user={user!} />
         ) : view === 'sentiment' ? (
           <SentimentTracker key="senti-comp-last" />
+        ) : view === 'chatbot' ? (
+          <HamsterChatBot key="chatbot-comp-last" />
         ) : (
           <RouletteGame key="roul-comp-last" />
         )}
@@ -222,7 +225,7 @@ const SentimentTracker: React.FC = () => {
   );
 };
 
-const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, onGoLadder: () => void }> = ({ mission, count = 1, onUpdate, onDelete, onGoLadder }) => {
+const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, onGoLadder: () => void, isBlind?: boolean, canUseLadder?: boolean }> = ({ mission, count = 1, onUpdate, onDelete, onGoLadder, isBlind = false, canUseLadder = true }) => {
   const [effect, setEffect] = useState<string | null>(null);
   const triggerAction = (status: string) => {
     setEffect(status);
@@ -237,6 +240,21 @@ const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: strin
   };
   const contentFixed = mission.content.startsWith('!미션 ') ? mission.content.replace('!미션 ', '') : mission.content;
   const isLadder = contentFixed.includes('의리사다리');
+
+  if (isBlind) {
+    return (
+      <motion.div layout initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, x: 50 }}
+        style={{ minHeight: '65px', width: '100%', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#080808', borderRadius: '12px', boxSizing: 'border-box', border: '2px solid #2a2a2a' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+          <div style={{ flexShrink: 0, padding: '4px 10px', borderRadius: '5px', background: '#1a1a1a', color: '#444', fontSize: '0.65rem', fontWeight: 900 }}>🔒</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontWeight: 900, fontSize: '1rem', color: '#444' }}>비공개 미션</span>
+            <span style={{ fontSize: '0.72rem', color: '#333', fontWeight: 600 }}>본인에게만 공개됩니다</span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
   return (
     <motion.div layout initial={{ x: -20, opacity: 0 }}
       animate={effect === 'success' ? { scale: 1.05, background: '#00ffa3', color: '#000' } : effect === 'failure' ? { x: [-5, 5, -5, 5, 0], backgroundColor: '#ff4b4b' } : effect === 'accepted' ? { scale: [1, 1.05, 1], borderColor: '#00ffa3' } : effect === 'rejected' ? { x: -100, opacity: 0 } : { x: 0, opacity: 1, scale: 1 }}
@@ -264,7 +282,7 @@ const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: strin
       </div>
       <div style={{ display: 'flex', gap: '8px', flexShrink: 0, marginLeft: '10px', minWidth: mission.status === 'accepted' && isLadder ? '230px' : '150px', justifyContent: 'flex-end' }}>
         {mission.status === 'pending' ? (<><button onClick={() => triggerAction('accepted')} style={{ cursor: 'pointer', background: '#00ffa3', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'black', fontSize: '0.8rem' }}>수락</button><button onClick={() => triggerAction('rejected')} style={{ cursor: 'pointer', background: '#222', border: '1px solid #ff4b4b', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: '#ff4b4b', fontSize: '0.8rem' }}>거절</button></>) :
-          (<>{isLadder && <button onClick={() => { onGoLadder(); setTimeout(() => onDelete(mission.id), 100); }} style={{ cursor: 'pointer', background: '#ffbd2e', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'black', fontSize: '0.8rem', display: 'flex', gap: '5px' }}>사다리 <Sparkles size={14} /></button>}<button onClick={() => triggerAction('success')} style={{ cursor: 'pointer', background: 'white', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'black', fontSize: '0.8rem' }}>성공</button><button onClick={() => triggerAction('failure')} style={{ cursor: 'pointer', background: '#ff4b4b', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'white', fontSize: '0.8rem' }}>실패</button></>)}
+          (<>{isLadder && <button onClick={() => { if (canUseLadder) { onGoLadder(); setTimeout(() => onDelete(mission.id), 100); } }} style={{ cursor: canUseLadder ? 'pointer' : 'not-allowed', background: canUseLadder ? '#ffbd2e' : '#2a2a2a', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canUseLadder ? 'black' : '#555', fontSize: '0.8rem', display: 'flex', gap: '5px', opacity: canUseLadder ? 1 : 0.5 }}>사다리 <Sparkles size={14} /></button>}<button onClick={() => triggerAction('success')} style={{ cursor: 'pointer', background: 'white', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'black', fontSize: '0.8rem' }}>성공</button><button onClick={() => triggerAction('failure')} style={{ cursor: 'pointer', background: '#ff4b4b', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'white', fontSize: '0.8rem' }}>실패</button></>)}
       </div>
     </motion.div>
   );
@@ -422,7 +440,9 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
                   {memberMissions.length === 0 ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ margin: 'auto', color: '#555', fontSize: '1rem', fontWeight: 800 }}>할당된 미션이 없습니다.</motion.div>
                   ) : memberMissions.map(m => (
-                    <MissionCard key={m.id} mission={m} onUpdate={onUpdate} onDelete={onDelete} onGoLadder={() => console.log('사다리 이동 클릭됨')} />
+                    <MissionCard key={m.id} mission={m} onUpdate={onUpdate} onDelete={onDelete} onGoLadder={() => console.log('사다리 이동 클릭됨')}
+                      isBlind={!!m.private && user.name !== cleanName && user.role !== 'admin'}
+                      canUseLadder={user.role === 'admin' || user.role === 'host'} />
                   ))}
                 </AnimatePresence>
               </div>
@@ -453,6 +473,296 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
         </motion.div>
       )}
     </>
+  );
+};
+
+// ─── 햄스터 채팅봇 ───────────────────────────────────────────────────────────
+
+const HAMSTER_PALETTE = [
+  { body: '#C4722A', cheek: '#F5E8D0', ear: '#E8907A' },  // 갈색 (레퍼런스)
+  { body: '#5A8A3A', cheek: '#DFF0D0', ear: '#90C870' },  // 초록
+  { body: '#7060B8', cheek: '#DDD8F5', ear: '#A090D8' },  // 보라
+  { body: '#3A7AAA', cheek: '#CCE8F5', ear: '#70B0D8' },  // 파랑
+  { body: '#AA5A3A', cheek: '#F5DDD0', ear: '#D09070' },  // 주황
+  { body: '#884A88', cheek: '#F0D0F0', ear: '#C080C0' },  // 분홍
+];
+
+interface HamsterData {
+  nickname: string;
+  x: number;
+  direction: 'left' | 'right' | 'front';
+  isWalking: boolean;
+  message: string | null;
+  messageTs: number;
+  lastMessageTs: number;
+  colorIdx: number;
+  isDonation: boolean;
+  sinking: boolean;
+}
+
+const HamsterFrontSVG: React.FC<{ c: typeof HAMSTER_PALETTE[0] }> = ({ c }) => (
+  <g>
+    {/* 귀 (작고 둥글게) */}
+    <circle cx="13" cy="11" r="6.5" fill={c.body} /><circle cx="31" cy="11" r="6.5" fill={c.body} />
+    <circle cx="13" cy="11" r="4" fill={c.ear} /><circle cx="31" cy="11" r="4" fill={c.ear} />
+    <circle cx="13" cy="11" r="2" fill="#F8C8C0" opacity="0.7" /><circle cx="31" cy="11" r="2" fill="#F8C8C0" opacity="0.7" />
+    {/* 크림색 볼 주머니 (레퍼런스 핵심 - 얼굴보다 밝은 색) */}
+    <ellipse cx="5" cy="26" rx="11" ry="10" fill={c.cheek} />
+    <ellipse cx="39" cy="26" rx="11" ry="10" fill={c.cheek} />
+    {/* 갈색 머리 (볼 위에 오버레이) */}
+    <circle cx="22" cy="20" r="14" fill={c.body} />
+    {/* 이마~볼 경계 (부드러운 크림 그라데이션) */}
+    <ellipse cx="22" cy="27" rx="12" ry="8" fill={c.cheek} opacity="0.55" />
+    {/* 눈 (크고 반짝이는 구슬눈) */}
+    <circle cx="16" cy="16" r="4.5" fill="#1a0a00" /><circle cx="28" cy="16" r="4.5" fill="#1a0a00" />
+    <circle cx="17.8" cy="14.2" r="2" fill="white" /><circle cx="29.8" cy="14.2" r="2" fill="white" />
+    <circle cx="16.5" cy="17.8" r="1" fill="white" opacity="0.5" /><circle cx="28.5" cy="17.8" r="1" fill="white" opacity="0.5" />
+    {/* 코 (작은 하트형) */}
+    <path d="M20.5 23 Q22 21.5 23.5 23 Q22 25 20.5 23Z" fill="#C03055" />
+    {/* 입 */}
+    <path d="M20 25.5 Q22 28 24 25.5" stroke="#A02845" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    {/* 콧수염선 (흐린) */}
+    <line x1="14" y1="24" x2="19" y2="23.5" stroke={c.body} strokeWidth="0.8" opacity="0.4" />
+    <line x1="30" y1="24" x2="25" y2="23.5" stroke={c.body} strokeWidth="0.8" opacity="0.4" />
+    {/* 몸통 (둥글고 통통) */}
+    <ellipse cx="22" cy="40" rx="13" ry="11" fill={c.body} />
+    {/* 배 (크림색) */}
+    <ellipse cx="22" cy="41" rx="8.5" ry="8" fill={c.cheek} />
+    {/* 앞발 (레퍼런스처럼 앞으로 들어올린 자세) */}
+    <ellipse cx="9" cy="37" rx="5" ry="4" fill={c.body} transform="rotate(-20 9 37)" />
+    <ellipse cx="35" cy="37" rx="5" ry="4" fill={c.body} transform="rotate(20 35 37)" />
+    <ellipse cx="7.5" cy="41" rx="4" ry="2.5" fill={c.body} />
+    <ellipse cx="36.5" cy="41" rx="4" ry="2.5" fill={c.body} />
+    {/* 발 */}
+    <ellipse cx="16" cy="50" rx="6" ry="2.5" fill={c.body} />
+    <ellipse cx="28" cy="50" rx="6" ry="2.5" fill={c.body} />
+  </g>
+);
+
+const HamsterSideSVG: React.FC<{ c: typeof HAMSTER_PALETTE[0]; frame: number }> = ({ c, frame }) => (
+  <g>
+    {/* ── 뒷쪽 레이어 ── */}
+    {/* 꼬리 */}
+    <circle cx="7" cy="34" r="4.5" fill={c.cheek} />
+    {/* 몸통 (레퍼런스처럼 아래가 빵빵한 둥근 타원) */}
+    <ellipse cx="20" cy="34" rx="16" ry="15" fill={c.body} />
+    {/* 크고 빵빵한 배 (몸통 면적의 60% 이상 차지) */}
+    <ellipse cx="22" cy="37" rx="12" ry="12" fill={c.cheek} />
+
+    {/* ── 앞쪽 레이어 ── */}
+    {/* 머리 (몸통과 자연스럽게 연결) */}
+    <circle cx="30" cy="17" r="13" fill={c.body} />
+    {/* 귀 */}
+    <circle cx="23" cy="6" r="6" fill={c.body} />
+    <circle cx="23" cy="6" r="3.8" fill={c.ear} />
+    <circle cx="23" cy="6" r="1.8" fill="#F8C8C0" opacity="0.75" />
+    {/* 크림색 볼 주머니 — 머리보다 앞으로 자연스럽게 */}
+    <circle cx="39" cy="22" r="11" fill={c.cheek} />
+    {/* 볼~얼굴 경계 부드럽게 */}
+    <ellipse cx="33" cy="20" rx="9" ry="8" fill={c.cheek} opacity="0.6" />
+    {/* 눈 (크고 귀엽게) */}
+    <circle cx="25" cy="13" r="4.5" fill="#1a0a00" />
+    <circle cx="26.8" cy="11.2" r="2" fill="white" />
+    <circle cx="25.2" cy="15.2" r="1" fill="white" opacity="0.45" />
+    {/* 코 */}
+    <circle cx="47" cy="22" r="2.2" fill="#C03055" />
+    {/* 다리 (자연스러운 걷기) */}
+    <ellipse cx="28" cy="48" rx="6" ry="3" fill={c.body} transform={`rotate(${frame === 0 ? -22 : 18} 28 48)`} />
+    <ellipse cx="14" cy="48" rx="6" ry="3" fill={c.body} transform={`rotate(${frame === 0 ? 22 : -18} 14 48)`} />
+  </g>
+);
+
+const HamsterChatBot: React.FC = () => {
+  const [hamsters, setHamsters] = useState<Map<string, HamsterData>>(new Map());
+  const [walkFrame, setWalkFrame] = useState(0);
+  const [chatLog, setChatLog] = useState<{ sender: string; content: string; isDonation: boolean }[]>([]);
+  const chatLogRef = useRef<HTMLDivElement>(null);
+  const sinkTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const STAGE_W = 860;
+  const INACTIVE_MS = 60000;
+
+  // 발걸음 프레임 토글
+  useEffect(() => {
+    const t = setInterval(() => setWalkFrame(f => f === 0 ? 1 : 0), 280);
+    return () => clearInterval(t);
+  }, []);
+
+  // 랜덤 이동
+  useEffect(() => {
+    const t = setInterval(() => {
+      setHamsters(prev => {
+        const next = new Map(prev);
+        next.forEach((h, key) => {
+          if (h.sinking) return;
+          if (Math.random() < 0.55) {
+            const dx = (Math.random() - 0.5) * 220;
+            const newX = Math.max(10, Math.min(STAGE_W - 70, h.x + dx));
+            next.set(key, { ...h, x: newX, direction: dx > 0 ? 'right' : 'left', isWalking: true });
+          } else {
+            next.set(key, { ...h, direction: 'front', isWalking: false });
+          }
+        });
+        return next;
+      });
+    }, 2800);
+    return () => clearInterval(t);
+  }, []);
+
+  // 말풍선 자동 제거 + 30초 비활성 시 땅속으로 사라짐
+  useEffect(() => {
+    const t = setInterval(() => {
+      const now = Date.now();
+      setHamsters(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        next.forEach((h, key) => {
+          if (h.message && now - h.messageTs > 5000) {
+            next.set(key, { ...h, message: null }); changed = true;
+          }
+          if (!h.sinking && now - h.lastMessageTs > INACTIVE_MS) {
+            next.set(key, { ...h, sinking: true, isWalking: false }); changed = true;
+            // 애니메이션 완료 후 삭제
+            const timer = setTimeout(() => {
+              setHamsters(p => { const m = new Map(p); m.delete(key); return m; });
+              sinkTimers.current.delete(key);
+            }, 1400);
+            sinkTimers.current.set(key, timer);
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => {
+      clearInterval(t);
+      sinkTimers.current.forEach(timer => clearTimeout(timer));
+    };
+  }, []);
+
+  // 채팅 수신
+  useEffect(() => {
+    const handle = ({ sender, content, isDonation }: { sender: string; content: string; isDonation: boolean }) => {
+      // {} 이모티콘 제거 후 텍스트만 남기고, 빈 메시지는 무시
+      const cleaned = content.replace(/\{[^}]*\}/g, '').trim();
+      if (!cleaned) return;
+      // 말풍선용 25자 / 로그용 40자 제한
+      const bubbleText = cleaned.length > 4 ? cleaned.slice(0, 4) + '…' : cleaned;
+      const logText = cleaned.length > 40 ? cleaned.slice(0, 40) + '…' : cleaned;
+      const now = Date.now();
+      setChatLog(p => [...p.slice(-99), { sender, content: logText, isDonation }]);
+      setHamsters(prev => {
+        const next = new Map(prev);
+        const existing = next.get(sender);
+        if (existing) {
+          // 땅속에 있던 햄스터가 채팅 치면 다시 올라오게
+          if (existing.sinking) {
+            clearTimeout(sinkTimers.current.get(sender));
+            sinkTimers.current.delete(sender);
+          }
+          next.set(sender, { ...existing, message: bubbleText, messageTs: now, lastMessageTs: now, isDonation, isWalking: false, direction: 'front', sinking: false });
+        } else {
+          next.set(sender, {
+            nickname: sender, x: Math.random() * (STAGE_W - 80) + 20,
+            direction: 'front', isWalking: false,
+            message: bubbleText, messageTs: now, lastMessageTs: now,
+            colorIdx: next.size % HAMSTER_PALETTE.length,
+            isDonation, sinking: false,
+          });
+        }
+        return next;
+      });
+    };
+    socket.on('mainChatLog', handle);
+    return () => { socket.off('mainChatLog', handle); };
+  }, []);
+
+  useEffect(() => {
+    if (chatLogRef.current) chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+  }, [chatLog]);
+
+  const hamsterList = Array.from(hamsters.values());
+
+  return (
+    <div style={{ background: 'transparent', borderRadius: '20px', border: 'none', overflow: 'hidden', padding: '20px' }}>
+      <h2 style={{ color: '#ffbd2e', fontWeight: 900, margin: '0 0 16px 0', fontSize: '1.3rem' }}>🐹 찌모 채팅봇</h2>
+
+      {/* 무대 */}
+      <div style={{ position: 'relative', width: '100%', height: '360px', background: 'linear-gradient(180deg, transparent 0%, transparent 58%, #0e1a06 58%, #0e1a06 100%)', borderRadius: '15px', overflow: 'hidden', border: '1px solid transparent' }}>
+        {/* 별 */}
+        {Array.from({ length: 24 }, (_, i) => (
+          <div key={i} style={{ position: 'absolute', width: i % 3 === 0 ? '3px' : '2px', height: i % 3 === 0 ? '3px' : '2px', background: 'white', borderRadius: '50%', left: `${(i * 43 + 7) % 100}%`, top: `${(i * 29 + 3) % 55}%`, opacity: 0.3 + (i % 4) * 0.15 }} />
+        ))}
+        {/* 잔디 */}
+        {Array.from({ length: 35 }, (_, i) => (
+          <div key={i} style={{ position: 'absolute', bottom: '93px', left: `${(i * 29 + 5) % 100}%`, width: '3px', height: `${7 + (i % 6) * 3}px`, background: i % 4 === 0 ? '#4a6a2a' : '#3a5a1a', borderRadius: '2px 2px 0 0', transform: `rotate(${(i % 3 - 1) * 12}deg)` }} />
+        ))}
+        {/* 바닥 (햄스터보다 앞 레이어 — 싱킹 시 덮음) */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(180deg, #1a2e0a 0%, #0e1a06 100%)', zIndex: 5 }} />
+
+        {/* 햄스터 없을 때 */}
+        {hamsterList.length === 0 && (
+          <div style={{ position: 'absolute', top: '45%', left: '50%', transform: 'translate(-50%,-50%)', color: '#333', textAlign: 'center', fontWeight: 900 }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🐹</div>
+            <div style={{ fontSize: '0.9rem' }}>채팅이 오면 햄스터가 나타납니다!</div>
+          </div>
+        )}
+
+        {/* 햄스터들 */}
+        {hamsterList.map(h => {
+          const colors = HAMSTER_PALETTE[h.colorIdx];
+          const isFront = h.direction === 'front';
+          return (
+            <motion.div key={h.nickname}
+              animate={{ x: h.x, y: h.sinking ? 110 : 0, opacity: h.sinking ? 0 : 1 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.9, delay: 0.3 } }}
+              style={{ position: 'absolute', bottom: '92px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '56px', zIndex: h.sinking ? 2 : 10 }}>
+
+              {/* 말풍선 */}
+              <AnimatePresence>
+                {h.message && (
+                  <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
+                    style={{ position: 'absolute', bottom: '80px', background: h.isDonation ? '#2a1800' : 'white', color: h.isDonation ? '#ffbd2e' : '#111', border: h.isDonation ? '1.5px solid #ffbd2e' : 'none', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: 1.3 }}>
+                    {h.isDonation && <span style={{ marginRight: '4px' }}>💰</span>}{h.message}
+                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: `7px solid ${h.isDonation ? '#ffbd2e' : 'white'}` }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* 햄스터 SVG */}
+              <motion.div animate={h.isWalking ? { y: [0, -4, 0, -4, 0] } : { y: 0 }} transition={h.isWalking ? { duration: 0.56, repeat: Infinity } : { duration: 0.2 }}>
+                <svg width="46" height="46" viewBox="0 0 44 50" style={{ transform: h.direction === 'left' ? 'scaleX(-1)' : 'scaleX(1)', overflow: 'visible' }}>
+                  {isFront ? <HamsterFrontSVG c={colors} /> : <HamsterSideSVG c={colors} frame={walkFrame} />}
+                </svg>
+              </motion.div>
+
+              {/* 닉네임 */}
+              <div style={{ color: '#aaa', fontSize: '0.62rem', fontWeight: 700, marginTop: '1px', textShadow: '0 1px 4px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center' }}>
+                {h.nickname}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* 채팅 로그 */}
+      <div ref={chatLogRef} style={{ marginTop: '14px', background: '#0a0a0a', borderRadius: '10px', padding: '12px 14px', maxHeight: '160px', overflowY: 'auto', border: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        {chatLog.length === 0
+          ? <div style={{ color: '#333', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', padding: '10px 0' }}>채팅 로그가 여기에 표시됩니다</div>
+          : chatLog.map((c, i) => (
+            <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', padding: '3px 0', borderBottom: '1px solid #111' }}>
+              {c.isDonation && <span style={{ color: '#ffbd2e', fontSize: '0.7rem' }}>💰</span>}
+              <span style={{ color: HAMSTER_PALETTE[Array.from(hamsters.keys()).indexOf(c.sender) % HAMSTER_PALETTE.length]?.body ?? '#00ffa3', fontWeight: 900, flexShrink: 0 }}>{c.sender}</span>
+              <span style={{ color: '#777' }}>:</span>
+              <span style={{ color: c.isDonation ? '#ffbd2e' : '#bbb', flex: 1, wordBreak: 'break-all' }}>{c.content}</span>
+            </div>
+          ))
+        }
+      </div>
+
+      {/* 햄스터 수 카운트 */}
+      <div style={{ marginTop: '10px', color: '#444', fontSize: '0.75rem', fontWeight: 700, textAlign: 'right' }}>
+        🐹 현재 {hamsterList.length}마리 활동 중
+      </div>
+    </div>
   );
 };
 

@@ -88,10 +88,20 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
       timestamp: new Date().toISOString(),
       type: 'main'
     };
+    const rogadaMission = {
+      id: (Date.now() + 1).toString(),
+      creator: sender,
+      target: '찌모',
+      content: missionContent,
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+      type: 'rogada'
+    };
     const missions = getMissions();
-    missions.push(newMission);
+    missions.push(newMission, rogadaMission);
     saveMissions(missions);
     io.emit('newMission', newMission);
+    io.emit('newMission', rogadaMission);
     console.log(`✨ [New Mission] ${sender}: ${missionContent}`);
   }
 
@@ -117,6 +127,26 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
       console.log(`🛠️ [Rogada Mission] ${sender} -> ${member}: ${missionContent}`);
       break; // 한 명에게만 매핑되면 종료
     }
+  }
+
+  // 개인 미션 등록 (!개인) - 찌모 보드에 비공개로 추가
+  if (content.startsWith('!개인 ')) {
+    const missionContent = content.replace('!개인 ', '').trim();
+    const newMission = {
+      id: Date.now().toString(),
+      creator: sender,
+      target: '찌모',
+      content: missionContent,
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+      type: 'rogada',
+      private: true
+    };
+    const missions = getMissions();
+    missions.push(newMission);
+    saveMissions(missions);
+    io.emit('newMission', newMission);
+    console.log(`🔒 [Private Mission - 찌모] ${sender}: ${missionContent}`);
   }
 
   // 룰렛 추가 명령어 (!룰렛추가) - 예: 후원시에만
@@ -155,6 +185,26 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
     io.emit('newMission', newMission);
     console.log(`📡 [${member} 채널 전용 미션] ${sender} -> ${missionContent}`);
   }
+
+  // 개별 채널에서 `!개인 내용` 을 치면, 해당 멤버의 비공개 로가다 미션으로 처리
+  if (content.startsWith('!개인 ')) {
+    const missionContent = content.replace('!개인 ', '').trim();
+    const newMission = {
+      id: Date.now().toString(),
+      creator: sender,
+      target: member,
+      content: missionContent,
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+      type: 'rogada',
+      private: true
+    };
+    const missions = getMissions();
+    missions.push(newMission);
+    saveMissions(missions);
+    io.emit('newMission', newMission);
+    console.log(`🔒 [Private Mission - ${member}] ${sender}: ${missionContent}`);
+  }
 };
 
 (async () => {
@@ -168,8 +218,8 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
     chat.on('chat', (message) => {
       const sender = message.profile.nickname;
       const content = message.message;
-      // 채팅로그 복구
       console.log(`💬 [Chat] ${sender}: ${content}`);
+      io.emit('mainChatLog', { sender, content, isDonation: false, timestamp: Date.now() });
       processMessage(sender, content, false);
     });
 
@@ -177,6 +227,7 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
       const sender = donation.profile?.nickname || '익명후원자';
       const content = donation.message;
       console.log(`💰 [Donation] ${sender}: ${content}`);
+      if (content) io.emit('mainChatLog', { sender, content, isDonation: true, timestamp: Date.now() });
       processMessage(sender, content, true);
     });
 
