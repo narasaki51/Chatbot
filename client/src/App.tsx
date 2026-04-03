@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Play, RotateCcw, PartyPopper, Sparkles, Zap, Trash2, Settings2, EyeOff, Eye, Users, Trophy, UserPlus, CheckCircle2, Circle, Lock } from 'lucide-react';
+import { RotateCcw, PartyPopper, Sparkles, Zap, Trash2, Settings2, EyeOff, Eye, Users, Lock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // 접속한 호스트명을 유지하면서 포트만 변경하여 범용적인 서버 주소 생성
@@ -513,7 +513,7 @@ const RouletteGame: React.FC = () => {
       <div style={{ position: 'relative', width: '560px', height: '560px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <motion.div animate={{ rotate: rotation }} transition={{ duration: 0 }} style={{ width: '510px', height: '510px', position: 'relative' }}>
           <svg viewBox="-45 -45 590 590" style={{ width: '590px', height: '590px', position: 'absolute', top: '-40px', left: '-40px', overflow: 'visible' }}>
-            <g id="pie-layer">{items.map((it, i) => { const st = 360 / items.length; const a = i * st; const sR = (a - 90) * Math.PI / 180; const eR = (a + st - 90) * Math.PI / 180; return <path key={i} d={`M 250 250 L ${250 + 250 * Math.cos(sR)} ${250 + 250 * Math.sin(sR)} A 250 250 0 0 1 ${250 + 250 * Math.cos(eR)} ${250 + 250 * Math.sin(eR)} Z`} fill={colors[i % colors.length]} stroke="#000" strokeWidth="1" strokeOpacity="0.1" />; })}</g>
+            <g id="pie-layer">{items.map((_it, i) => { const st = 360 / items.length; const a = i * st; const sR = (a - 90) * Math.PI / 180; const eR = (a + st - 90) * Math.PI / 180; return <path key={i} d={`M 250 250 L ${250 + 250 * Math.cos(sR)} ${250 + 250 * Math.sin(sR)} A 250 250 0 0 1 ${250 + 250 * Math.cos(eR)} ${250 + 250 * Math.sin(eR)} Z`} fill={colors[i % colors.length]} stroke="#000" strokeWidth="1" strokeOpacity="0.1" />; })}</g>
             <g id="labels-layer">{items.map((it, i) => { const st = 360 / items.length; const a = (i * st) + st / 2; return <text key={i} x={250 + 175 * Math.cos((a - 90) * Math.PI / 180)} y={255 + 175 * Math.sin((a - 90) * Math.PI / 180)} fill="white" fontSize="18" fontWeight="900" textAnchor="middle" dominantBaseline="middle" transform={`rotate(${a}, ${250 + 175 * Math.cos((a - 90) * Math.PI / 180)}, ${255 + 175 * Math.sin((a - 90) * Math.PI / 180)})`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>{it}</text>; })}</g>
             <g id="pins-layer">{items.map((_, i) => { const st = 360 / items.length; const r = ((i + 1) * st - 90) * Math.PI / 180; return <g key={i}><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="10" fill="#fff" filter="url(#p-shad-l)" /><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="6" fill="#ddd" /></g>; })}</g>
             <defs><filter id="p-shad-l"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.8" /></filter></defs>

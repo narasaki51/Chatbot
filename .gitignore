@@ -1,0 +1,28 @@
+# 의존성
+node_modules/
+**/node_modules/
+
+# 빌드 결과물
+client/dist/
+client/dist-ssr/
+
+# 환경변수 (민감정보 - 절대 올리면 안됨!)
+.env
+**/.env
+server/.env
+serverAPI/.env
+
+# 데이터 파일 (로컬에서만 사용)
+server/missions_db.json
+server/users.json
+
+# 로그
+*.log
+npm-debug.log*
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# 키 파일
+*.pem
