@@ -1,0 +1,51 @@
+[
+  {
+    "id": "admin",
+    "pw": "$2b$12$e0TcwemgUi9Jr9M5cFhrzO8CfAFUAj31q2g1.b2SkE3P3tPIFKCqi",
+    "role": "admin",
+    "name": "관리자",
+    "chnnelid": ""
+  },
+  {
+    "id": "hamster",
+    "pw": "$2b$12$t56doW1jz4kTRv6.mrvVgevGCePW4r9b8jNwJxSgBq90Q1Dflm6ta",
+    "role": "host",
+    "name": "찌모",
+    "chnnelid": ""
+  },
+  {
+    "id": "mirang",
+    "pw": "$2b$12$p7D1Y3KUbs20KxoSz/Q/TuZ.ukJptFECR5MHCmFwgemLVEY2kLqxm",
+    "role": "member",
+    "name": "미랑",
+    "chnnelid": "e9dbe302080c01d76fcd4aa6c8a05a64"
+  },
+  {
+    "id": "gangjun",
+    "pw": "$2b$12$OPpH96fjX2fw5GY/59iQmOnqedJxYtPDLWniyP9/PE952iOhAWuei",
+    "role": "member",
+    "name": "갱쥰",
+    "chnnelid": "d29db9ee45bf3b5e5b099c6b3c54b443"
+  },
+  {
+    "id": "seossi",
+    "pw": "$2b$12$NxxK2FnSX/FXlj4Sqy/nIOdYOEpyWY1BHAbLmcD7XOjGw3N4n2l3e",
+    "role": "member",
+    "name": "서씨",
+    "chnnelid": "f6563be189d5ccda981690be5c38c7fc"
+  },
+  {
+    "id": "tteogi",
+    "pw": "$2b$12$TDv.egxMKb5yALKqfNHRRujTVOPEtlgOIhjLYlV6jL6uXWOVYDlJO",
+    "role": "member",
+    "name": "떠기",
+    "chnnelid": "7c89f186996a6aecf053b904823f53b6"
+  },
+  {
+    "id": "malgu",
+    "pw": "$2b$12$4l1lI1AGnDQId0gEg7PFE.9EY//IVihEJgRxKx2OWxxdWZQ7bgOn.",
+    "role": "member",
+    "name": "말구",
+    "chnnelid": "195e40531e373d386ef37bcfd48418e1"
+  }
+]
