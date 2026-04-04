@@ -164,7 +164,7 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
   if ((isDonation || !isDonationOnly) && content.startsWith('!룰렛추가 ')) {
     const rouletteContent = content.replace('!룰렛추가 ', '').trim();
     if (rouletteContent) {
-      io.emit('addRouletteItem', rouletteContent);
+      io.emit('addRouletteItem', { member: '찌모', content: rouletteContent });
       console.log(`🎡 [Roulette Item Added] ${sender} -> ${rouletteContent} (Mode: ${isDonationOnly ? 'DonationOnly' : 'AllChat'})`);
     }
   }
@@ -217,23 +217,36 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
     console.log(`🔒 [Private Mission - ${member}] ${sender}: ${missionContent}`);
   }
 
-  // 개별 채널에서 `!룰렛추가 내용` 처리
+  // 개별 채널에서 `!룰렛추가 내용` 처리 — 해당 멤버 룰렛에만 추가
   if ((isDonation || !isDonationOnly) && content.startsWith('!룰렛추가 ')) {
     const rouletteContent = content.replace('!룰렛추가 ', '').trim();
     if (rouletteContent) {
-      io.emit('addRouletteItem', rouletteContent);
-      console.log(`🎡 [Member Channel Roulette] ${member} -> ${sender}: ${rouletteContent}`);
+      io.emit('addRouletteItem', { member, content: rouletteContent });
+      console.log(`🎡 [Member Roulette] ${member} <- ${sender}: ${rouletteContent}`);
     }
   }
 };
 
-(async () => {
-  console.log("🚀 Initializing Chzzk Integration...");
-  try {
-    const channelId = process.env.CHZZK_CHANNEL_ID || '82c0b64d12c823f66810c97d62234e4f';
-    const chat = client.chat({ channelId });
+const CHANNEL_ID = process.env.CHZZK_CHANNEL_ID || '82c0b64d12c823f66810c97d62234e4f';
+let mainChat: any = null;
+let mainChatRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    chat.on('connect', () => console.log('✅ Connected to Chzzk Chat. Healthy.'));
+const connectMainChat = async () => {
+  if (mainChatRetryTimer) { clearTimeout(mainChatRetryTimer); mainChatRetryTimer = null; }
+  try {
+    console.log("🔄 [Chzzk] 메인 채널 연결 시도...");
+    const chat = client.chat({ channelId: CHANNEL_ID });
+
+    chat.on('connect', () => {
+      console.log('✅ [Chzzk] 메인 채널 연결 성공.');
+      mainChat = chat;
+    });
+
+    chat.on('disconnect', () => {
+      console.warn('⚠️ [Chzzk] 연결 끊김. 30초 후 재시도...');
+      mainChat = null;
+      mainChatRetryTimer = setTimeout(connectMainChat, 30000);
+    });
 
     chat.on('chat', (message) => {
       const sender = message.profile.nickname;
@@ -253,9 +266,13 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
 
     await chat.connect();
   } catch (e) {
-    console.error("❌ Connection error:", e);
+    console.error("❌ [Chzzk] 연결 오류 (방송 중이 아닐 수 있음):", (e as Error).message);
+    console.log("⏳ 30초 후 재시도합니다...");
+    mainChatRetryTimer = setTimeout(connectMainChat, 30000);
   }
-})();
+};
+
+connectMainChat();
 
 // API 리스트
 const USERS_PATH = path.join(__dirname, 'users.json');

@@ -45,9 +45,9 @@ const LoginPage: React.FC<{ onSuccess: (user: UserAuth) => void }> = ({ onSucces
   );
 };
 
-const App: React.FC = () => {
+const AppMain: React.FC = () => {
   const [user, setUser] = useState<UserAuth | null>(null);
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball'>('dashboard');
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
@@ -157,6 +157,7 @@ const App: React.FC = () => {
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
             <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
+            <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
           </div>
         )}
 
@@ -223,6 +224,8 @@ const App: React.FC = () => {
           <SentimentTracker key="senti-comp-last" />
         ) : view === 'chatbot' ? (
           <HamsterChatBot key="chatbot-comp-last" />
+        ) : view === 'pinball' ? (
+          <PinballGame key="pinball-comp-last" />
         ) : (
           <RouletteGame key="roul-comp-last" user={user!} />
         )}
@@ -572,6 +575,7 @@ interface HamsterData {
   sinking: boolean;
   emerging: boolean;
   joinedAt: number;
+  isJumping: boolean;
 }
 
 const HamsterSprite: React.FC<{ colorIdx: number; row: SpriteRow; frame: number }> = ({ colorIdx, row, frame }) => {
@@ -590,6 +594,253 @@ const HamsterSprite: React.FC<{ colorIdx: number; row: SpriteRow; frame: number 
         backgroundPosition: `${-(frame * DISP_W)}px ${-Math.round(y * SPRITE_SCALE)}px`,
         backgroundRepeat: 'no-repeat',
       }} />
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// 🎥 OBS 오버레이 — 햄스터 무대만 (투명 배경)
+// ?overlay=true 로 접근
+// ─────────────────────────────────────────────
+const HamsterOverlay: React.FC = () => {
+  const [hamsters, setHamsters] = useState<Map<string, HamsterData>>(new Map());
+  const [walkFrame, setWalkFrame] = useState(0);
+  const [stageW, setStageW] = useState(window.innerWidth);
+  const sinkTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const INACTIVE_MS = 60000;
+
+  useEffect(() => {
+    const onResize = () => setStageW(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const STAGE_W = stageW;
+
+  // 발걸음 프레임
+  useEffect(() => {
+    const t = setInterval(() => setWalkFrame(f => f === 0 ? 1 : 0), 280);
+    return () => clearInterval(t);
+  }, []);
+
+  // 랜덤 이동 + 표정
+  useEffect(() => {
+    const IDLE_EXPRS: Array<'normal'|'angry'|'sad'|'happy'|'wink'> = ['normal','normal','happy','angry','sad','wink'];
+    const t = setInterval(() => {
+      setHamsters(prev => {
+        const next = new Map(prev);
+        next.forEach((h, key) => {
+          if (h.sinking) return;
+          if (Math.random() < 0.55) {
+            const dx = (Math.random() - 0.5) * 220;
+            const newX = Math.max(10, Math.min(STAGE_W - 70, h.x + dx));
+            const reps = Math.floor(Math.random() * 4) + 1;
+            next.set(key, { ...h, x: newX, direction: dx > 0 ? 'right' : 'left', isWalking: true, walkEndAt: Date.now() + 1700 * reps });
+          } else {
+            const expr = IDLE_EXPRS[Math.floor(Math.random() * IDLE_EXPRS.length)];
+            next.set(key, { ...h, direction: 'front', isWalking: false, walkEndAt: 0, expression: expr });
+          }
+        });
+        return next;
+      });
+    }, 2800);
+    return () => clearInterval(t);
+  }, []);
+
+  // 말풍선 자동 제거 + 비활성 제거 + 걸음 종료
+  useEffect(() => {
+    const t = setInterval(() => {
+      const now = Date.now();
+      setHamsters(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        next.forEach((h, key) => {
+          if (h.isWalking && h.walkEndAt && now >= h.walkEndAt) {
+            next.set(key, { ...h, isWalking: false, direction: 'front', walkEndAt: 0 }); changed = true;
+          }
+          if (h.message && now - h.lastMessageTs > 6000) {
+            next.set(key, { ...h, message: null }); changed = true;
+          }
+          if (!h.sinking && now - h.lastMessageTs > INACTIVE_MS) {
+            next.set(key, { ...h, sinking: true }); changed = true;
+            const st = setTimeout(() => setHamsters(p => { const m = new Map(p); m.delete(key); return m; }), 1400);
+            sinkTimers.current.set(key, st);
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // 소켓 이벤트 — HamsterChatBot과 동일하게 mainChatLog 사용
+  useEffect(() => {
+    const handleChat = (data: { sender: string; content: string; isDonation: boolean }) => {
+      const { sender, content, isDonation } = data;
+      const cleaned = content.replace(/^!(도네이션|donation)\s*/i, '').trim();
+      if (!cleaned) return;
+      const now = Date.now();
+
+      // !점프 명령 — 해당 햄스터만 점프 (필터링, 표시 안 함, 없으면 등장 후 점프)
+      if (cleaned.startsWith('!점프')) {
+        const jumpRaw = cleaned.slice(3).trim();
+        const jumpMsg = jumpRaw.length > 10 ? jumpRaw.slice(0, 10) + '…' : (jumpRaw || '점프!');
+        setHamsters(prev => {
+          const next = new Map(prev);
+          const h = next.get(sender);
+          if (h && !h.sinking) {
+            // 이미 존재 — 바로 점프
+            next.set(sender, { ...h, isJumping: true, message: jumpMsg, messageTs: now, lastMessageTs: now, expression: 'happy' });
+          } else if (!h || h.sinking) {
+            // 없거나 사라지는 중 — 새로 등장시키고 점프
+            if (sinkTimers.current.has(sender)) { clearTimeout(sinkTimers.current.get(sender)!); sinkTimers.current.delete(sender); }
+            const colorIdx = h?.colorIdx ?? (next.size % HAMSTER_COLORS.length);
+            const x = 40 + Math.random() * (STAGE_W - 120);
+            next.set(sender, { nickname: sender, x, colorIdx, expression: 'happy', isWalking: false, direction: 'front', walkEndAt: 0, message: jumpMsg, messageTs: now, lastMessageTs: now, sinking: false, isDonation: false, emerging: true, joinedAt: h?.joinedAt ?? now, isJumping: true });
+            setTimeout(() => {
+              setHamsters(p => { const m = new Map(p); const hh = m.get(sender); if (hh) m.set(sender, { ...hh, emerging: false }); return m; });
+            }, 600);
+          }
+          return next;
+        });
+        setTimeout(() => {
+          setHamsters(prev => {
+            const next = new Map(prev);
+            const h = next.get(sender);
+            if (h?.isJumping) next.set(sender, { ...h, isJumping: false });
+            return next;
+          });
+        }, 1200);
+        return;
+      }
+
+      const truncated = cleaned.length > 10 ? cleaned.slice(0, 10) + '…' : cleaned;
+      setHamsters(prev => {
+        const next = new Map(prev);
+        const existing = next.get(sender);
+        if (existing) {
+          if (sinkTimers.current.has(sender)) { clearTimeout(sinkTimers.current.get(sender)!); sinkTimers.current.delete(sender); }
+          next.set(sender, { ...existing, message: isDonation ? `💰 ${truncated}` : truncated, messageTs: now, lastMessageTs: now, sinking: false, isDonation: isDonation || existing.isDonation, expression: isDonation ? 'happy' : existing.expression });
+        } else {
+          const colorIdx = next.size % HAMSTER_COLORS.length;
+          const x = 40 + Math.random() * (STAGE_W - 120);
+          next.set(sender, { nickname: sender, x, colorIdx, expression: isDonation ? 'happy' : 'normal', isWalking: false, direction: 'front', walkEndAt: 0, message: isDonation ? `💰 ${truncated}` : truncated, messageTs: now, lastMessageTs: now, sinking: false, isDonation, emerging: true, joinedAt: now, isJumping: false });
+          setTimeout(() => {
+            setHamsters(p => { const m = new Map(p); const h = m.get(sender); if (h) m.set(sender, { ...h, emerging: false }); return m; });
+          }, 600);
+        }
+        return next;
+      });
+    };
+    socket.on('mainChatLog', handleChat);
+    return () => { socket.off('mainChatLog', handleChat); };
+  }, []);
+
+  const hamsterList = Array.from(hamsters.values());
+  const activeList  = hamsterList.filter(h => !h.sinking);
+  const kingNickname = activeList.length > 0
+    ? activeList.reduce((a, b) => a.joinedAt < b.joinedAt ? a : b).nickname
+    : null;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'transparent',
+      overflow: 'hidden',
+    }}>
+      {/* 무대 — 하단 고정 */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '260px' }}>
+
+        {/* 별 */}
+        {Array.from({ length: 18 }, (_, i) => (
+          <div key={i} style={{ position: 'absolute', width: i % 3 === 0 ? '3px' : '2px', height: i % 3 === 0 ? '3px' : '2px', background: 'white', borderRadius: '50%', left: `${(i * 43 + 7) % 100}%`, top: `${(i * 29 + 3) % 45}%`, opacity: 0.25 + (i % 4) * 0.1 }} />
+        ))}
+
+        {/* 일반 햄스터 */}
+        {hamsterList.filter(h => h.nickname !== kingNickname && !h.isDonation).map(h => {
+          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.direction === 'left' ? 'walkL' : h.isWalking && h.direction === 'right' ? 'walkR' : h.expression;
+          return (
+            <motion.div key={h.nickname}
+              initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
+              animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2 }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
+              style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              <AnimatePresence>
+                {h.message && (
+                  <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
+                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: h.isDonation ? '#2a1800' : 'white', color: h.isDonation ? '#ffbd2e' : '#111', border: h.isDonation ? '1.5px solid #ffbd2e' : 'none', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
+                    {h.isDonation && <span style={{ marginRight: '4px' }}>💰</span>}{h.message}
+                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: `7px solid ${h.isDonation ? '#ffbd2e' : 'white'}` }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
+                {h.nickname}
+              </div>
+              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+                <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
+              </motion.div>
+            </motion.div>
+          );
+        })}
+
+        {/* 도네이션 햄스터 */}
+        {hamsterList.filter(h => h.nickname !== kingNickname && h.isDonation).map(h => {
+          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.direction === 'left' ? 'walkL' : h.isWalking && h.direction === 'right' ? 'walkR' : h.expression;
+          return (
+            <motion.div key={h.nickname}
+              initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
+              animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2 }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
+              style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              <AnimatePresence>
+                {h.message && (
+                  <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
+                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: '#2a1800', color: '#ffbd2e', border: '1.5px solid #ffbd2e', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
+                    <span style={{ marginRight: '4px' }}>💰</span>{h.message}
+                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '7px solid #ffbd2e' }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div style={{ color: '#ffbd2e', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
+                💰 {h.nickname}
+              </div>
+              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+                <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
+              </motion.div>
+            </motion.div>
+          );
+        })}
+
+        {/* 왕관 햄스터 */}
+        {hamsterList.filter(h => h.nickname === kingNickname).map(h => {
+          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.direction === 'left' ? 'walkL' : h.isWalking && h.direction === 'right' ? 'walkR' : h.expression;
+          return (
+            <motion.div key={h.nickname}
+              initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
+              animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1.5 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2 }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
+              style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              <AnimatePresence>
+                {h.message && (
+                  <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
+                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: h.isDonation ? '#2a1800' : 'white', color: h.isDonation ? '#ffbd2e' : '#111', border: h.isDonation ? '1.5px solid #ffbd2e' : 'none', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
+                    {h.isDonation && <span style={{ marginRight: '4px' }}>💰</span>}{h.message}
+                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: `7px solid ${h.isDonation ? '#ffbd2e' : 'white'}` }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div style={{ color: '#ffdf00', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
+                ⭐ {h.nickname}
+              </div>
+              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+                <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
+              </motion.div>
+            </motion.div>
+          );
+        })}
+
+      </div>
     </div>
   );
 };
@@ -674,11 +925,52 @@ const HamsterChatBot: React.FC = () => {
       // {} 이모티콘 제거 후 텍스트만 남기고, 빈 메시지는 무시
       const cleaned = content.replace(/\{[^}]*\}/g, '').trim();
       if (!cleaned) return;
+      const now = Date.now();
+
+      // !점프 명령 — 해당 햄스터만 점프 (채팅 로그 미표시, 없으면 등장 후 점프)
+      if (cleaned.startsWith('!점프')) {
+        const jumpRaw = cleaned.slice(3).trim();
+        const jumpMsg = jumpRaw.length > 10 ? jumpRaw.slice(0, 10) + '…' : (jumpRaw || '점프!');
+        const bubbleJump = jumpMsg.match(/.{1,5}/g)?.join('\n') ?? jumpMsg;
+        setHamsters(prev => {
+          const next = new Map(prev);
+          const h = next.get(sender);
+          if (h && !h.sinking) {
+            // 이미 존재 — 바로 점프
+            next.set(sender, { ...h, isJumping: true, message: bubbleJump, messageTs: now, lastMessageTs: now, expression: 'happy' });
+          } else if (!h || h.sinking) {
+            // 없거나 사라지는 중 — 새로 등장시키고 점프
+            if (h?.sinking) { clearTimeout(sinkTimers.current.get(sender)); sinkTimers.current.delete(sender); }
+            next.set(sender, {
+              nickname: sender, x: Math.random() * (STAGE_W - 80) + 20,
+              direction: 'front', isWalking: false, walkEndAt: 0,
+              message: bubbleJump, messageTs: now, lastMessageTs: now,
+              colorIdx: (h?.colorIdx ?? next.size) % HAMSTER_COLORS.length,
+              expression: 'happy', isDonation: false,
+              sinking: false, emerging: true, joinedAt: h?.joinedAt ?? now,
+              isJumping: true,
+            });
+            setTimeout(() => {
+              setHamsters(p => { const m = new Map(p); const hh = m.get(sender); if (hh) m.set(sender, { ...hh, emerging: false }); return m; });
+            }, 600);
+          }
+          return next;
+        });
+        setTimeout(() => {
+          setHamsters(prev => {
+            const next = new Map(prev);
+            const h = next.get(sender);
+            if (h?.isJumping) next.set(sender, { ...h, isJumping: false });
+            return next;
+          });
+        }, 1200);
+        return;
+      }
+
       // 말풍선용 25자 / 로그용 40자 제한
       const truncated = cleaned.length > 10 ? cleaned.slice(0, 10) + '…' : cleaned;
       const bubbleText = truncated.match(/.{1,5}/g)?.join('\n') ?? truncated;
       const logText = cleaned.length > 40 ? cleaned.slice(0, 40) + '…' : cleaned;
-      const now = Date.now();
       setChatLog(p => [...p.slice(-99), { sender, content: logText, isDonation }]);
       setHamsters(prev => {
         const next = new Map(prev);
@@ -698,7 +990,7 @@ const HamsterChatBot: React.FC = () => {
             message: bubbleText, messageTs: now, lastMessageTs: now,
             colorIdx: next.size % HAMSTER_COLORS.length,
             expression: isDonation ? 'wink' : 'normal',
-            isDonation, sinking: false, emerging: true, joinedAt: now,
+            isDonation, sinking: false, emerging: true, joinedAt: now, isJumping: false,
           });
           const et = setTimeout(() => {
             setHamsters(p => {
@@ -759,9 +1051,9 @@ const HamsterChatBot: React.FC = () => {
           return (
             <motion.div key={h.nickname}
               initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
-              animate={{ x: h.x, y: h.sinking ? 110 : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
-              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
-              style={{ position: 'absolute', bottom: '104px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
+              style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
 
               {/* 말풍선 */}
               <AnimatePresence>
@@ -801,9 +1093,9 @@ const HamsterChatBot: React.FC = () => {
           return (
             <motion.div key={h.nickname}
               initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
-              animate={{ x: h.x, y: h.sinking ? 110 : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
-              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
-              style={{ position: 'absolute', bottom: '104px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
+              style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
               <AnimatePresence>
                 {h.message && (
                   <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
@@ -837,9 +1129,9 @@ const HamsterChatBot: React.FC = () => {
           return (
             <motion.div key={h.nickname}
               initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
-              animate={{ x: h.x, y: h.sinking ? 110 : 0, opacity: h.sinking ? 0 : 1, scale: 1.5 }}
-              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
-              style={{ position: 'absolute', bottom: '104px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1.5 }}
+              transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
+              style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
               <AnimatePresence>
                 {h.message && (
                   <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
@@ -907,10 +1199,18 @@ const HamsterChatBot: React.FC = () => {
 };
 
 const RouletteGame: React.FC<{ user: UserAuth }> = ({ user }) => {
-  const STORAGE_KEY = `roulette_items_${user.name}`;
-  const [items, setItems] = useState<string[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : ['치킨', '피자', '꽝', '별풍선', '애교', '랜덤박스', '벌칙'];
+  type RItem = { label: string; weight: number };
+  const STORAGE_KEY = `roulette_items_v2_${user.name}`;
+  const colors = ['#ff2eb4', '#00ffa3', '#2e96ff', '#ff8e2e', '#b42eff', '#ff4b4b', '#ffff00'];
+
+  const defaultItems: RItem[] = ['치킨', '피자', '꽝', '별풍선', '애교', '랜덤박스', '벌칙'].map(l => ({ label: l, weight: 1 }));
+
+  const [items, setItems] = useState<RItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved) as RItem[];
+    } catch {}
+    return defaultItems;
   });
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -920,122 +1220,686 @@ const RouletteGame: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [isConnected, setIsConnected] = useState(false);
   const lastTickCount = useRef(0);
   const tensionRef = useRef(0);
-  const colors = ['#ff2eb4', '#00ffa3', '#2e96ff', '#ff8e2e', '#b42eff', '#ff4b4b', '#ffff00'];
 
-  // 항목 변경 시 로컬 스토리지에 저장
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, STORAGE_KEY]);
 
+  // "내용x숫자" 파싱 → { label, weight }
+  const parseRaw = (raw: string): RItem => {
+    const m = raw.trim().match(/^(.+?)x(\d+)$/i);
+    if (m) return { label: m[1].trim(), weight: Math.min(Number(m[2]), 100) };
+    return { label: raw.trim(), weight: 1 };
+  };
+
+  // 중복이면 weight 누적, 없으면 신규 추가
+  const mergeItem = (prev: RItem[], incoming: RItem): RItem[] => {
+    const idx = prev.findIndex(it => it.label === incoming.label);
+    if (idx >= 0) return prev.map((it, i) => i === idx ? { ...it, weight: it.weight + incoming.weight } : it);
+    return [...prev, incoming];
+  };
+
+  const addItem = (raw: string) => {
+    if (!raw.trim()) return;
+    const parsed = parseRaw(raw);
+    setItems(prev => mergeItem(prev, parsed));
+    setNewItem('');
+  };
+
   useEffect(() => {
-    const handleAdd = (content: string) => { if (!isSpinning && content) { setItems(prev => [...prev, content]); } };
+    const handleAdd = ({ member, content }: { member: string; content: string }) => {
+      if (!isSpinning && content && member === user.name) {
+        const parsed = parseRaw(content);
+        setItems(prev => mergeItem(prev, parsed));
+      }
+    };
     socket.on('addRouletteItem', handleAdd);
     return () => { socket.off('addRouletteItem', handleAdd); };
   }, [isSpinning]);
 
   const connectChat = () => {
     if (!user.chnnelid) return alert('채널 ID가 설정되지 않은 계정입니다.');
-    fetch(`${SOCKET_URL}/connect-member`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ member: user.name, channelId: user.chnnelid })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        setIsConnected(true);
-        alert(`${user.name} 채널 채팅 연결 성공! (도네이션 시 룰렛 자동 추가 활성화)`);
-      } else {
-        alert('연결 실패: ' + data.error);
-      }
-    });
+    fetch(`${SOCKET_URL}/connect-member`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ member: user.name, channelId: user.chnnelid }) })
+      .then(r => r.json())
+      .then(data => { if (data.success) { setIsConnected(true); alert(`${user.name} 채널 채팅 연결 성공!`); } else alert('연결 실패: ' + data.error); });
   };
+
+  // 비율 기반 슬라이스 각도 계산
+  const totalWeight = items.reduce((s, it) => s + it.weight, 0);
+  const slices = (() => {
+    let cum = 0;
+    return items.map(it => {
+      const sweep = totalWeight > 0 ? (it.weight / totalWeight) * 360 : 0;
+      const start = cum;
+      cum += sweep;
+      return { label: it.label, weight: it.weight, startDeg: start, sweepDeg: sweep };
+    });
+  })();
 
   const spinRoulette = () => {
     if (isSpinning || items.length === 0) return;
     setIsSpinning(true); setWinner(null);
-    const spinCount = 10 + Math.random() * 5;
-    const extraAngle = Math.random() * 360;
-    const baseRotation = rotation;
-    const finalTarget = rotation + spinCount * 360 + extraAngle;
-    let startTime = Date.now();
+    const finalTarget = rotation + (10 + Math.random() * 5) * 360 + Math.random() * 360;
     const duration = 8500;
-    const step = 360 / items.length;
-    lastTickCount.current = Math.floor((baseRotation + 0.5) / step);
+    const baseRotation = rotation;
+    const tickStep = 360 / items.length;
+    lastTickCount.current = Math.floor((baseRotation + 0.5) / tickStep);
     const animate = () => {
-      const now = Date.now();
-      const elapsed = now - startTime;
+      const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const easeOut = 1 - Math.pow(1 - progress, 5);
-      const currentRotation = baseRotation + (finalTarget - baseRotation) * easeOut;
-      setRotation(currentRotation);
-      const currentTickCount = Math.floor((currentRotation + 0.5) / step);
-      if (currentTickCount > lastTickCount.current) {
-        tensionRef.current = Math.min(50, tensionRef.current + 38);
-        lastTickCount.current = currentTickCount;
-      }
+      const cur = baseRotation + (finalTarget - baseRotation) * easeOut;
+      setRotation(cur);
+      // 화살 흔들림
+      const tick = Math.floor((cur + 0.5) / tickStep);
+      if (tick > lastTickCount.current) { tensionRef.current = Math.min(50, tensionRef.current + 38); lastTickCount.current = tick; }
       tensionRef.current *= 0.85;
       if (tensionRef.current < 0.1) tensionRef.current = 0;
       setArrowWiggle(-tensionRef.current);
-      if (progress < 1) requestAnimationFrame(animate);
+      if (progress < 1) { requestAnimationFrame(animate); }
       else {
         setTimeout(() => {
-          const finalAngle = currentRotation % 360;
-          const index = Math.floor((360 - finalAngle) / step) % items.length;
-          setWinner(items[index]); setIsSpinning(false);
+          // 비율 기반 당첨 판정: 화살표가 가리키는 각도 → 어느 슬라이스?
+          const effective = ((360 - (cur % 360)) + 360) % 360;
+          const hit = slices.find(s => effective >= s.startDeg && effective < s.startDeg + s.sweepDeg) ?? slices[0];
+          setWinner(hit.label); setIsSpinning(false);
         }, 500);
       }
     };
+    const startTime = Date.now();
     requestAnimationFrame(animate);
   };
+
+  // SVG arc path 헬퍼
+  const arcPath = (cx: number, cy: number, r: number, startDeg: number, sweepDeg: number) => {
+    const s = (startDeg - 90) * Math.PI / 180;
+    const e = (startDeg + sweepDeg - 90) * Math.PI / 180;
+    const lg = sweepDeg > 180 ? 1 : 0;
+    return `M ${cx} ${cy} L ${cx + r * Math.cos(s)} ${cy + r * Math.sin(s)} A ${r} ${r} 0 ${lg} 1 ${cx + r * Math.cos(e)} ${cy + r * Math.sin(e)} Z`;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {user.role === 'guest' && (
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
-          <button onClick={connectChat} disabled={isConnected} style={{
-            cursor: isConnected ? 'default' : 'pointer',
-            background: isConnected ? '#111' : '#ffbd2e22',
-            color: isConnected ? '#00ffa3' : '#ffbd2e',
-            border: `1px solid ${isConnected ? '#00ffa3' : '#ffbd2e'}`,
-            padding: '12px 30px',
-            borderRadius: '15px',
-            fontWeight: 900,
-            fontSize: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
+          <button onClick={connectChat} disabled={isConnected} style={{ cursor: isConnected ? 'default' : 'pointer', background: isConnected ? '#111' : '#ffbd2e22', color: isConnected ? '#00ffa3' : '#ffbd2e', border: `1px solid ${isConnected ? '#00ffa3' : '#ffbd2e'}`, padding: '12px 30px', borderRadius: '15px', fontWeight: 900, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {isConnected ? '✅ 채팅 연결됨' : '+ 내 채널 채팅 연결 (도네이션 연동)'}
           </button>
         </div>
       )}
       <div style={{ display: 'flex', gap: '40px', justifyContent: 'center', padding: '10px 30px 30px 30px' }}>
+        {/* 룰렛 휠 */}
         <div style={{ position: 'relative', width: '560px', height: '560px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <motion.div animate={{ rotate: rotation }} transition={{ duration: 0 }} style={{ width: '510px', height: '510px', position: 'relative' }}>
-          <svg viewBox="-45 -45 590 590" style={{ width: '590px', height: '590px', position: 'absolute', top: '-40px', left: '-40px', overflow: 'visible' }}>
-            <g id="pie-layer">{items.map((_it, i) => { const st = 360 / items.length; const a = i * st; const sR = (a - 90) * Math.PI / 180; const eR = (a + st - 90) * Math.PI / 180; return <path key={i} d={`M 250 250 L ${250 + 250 * Math.cos(sR)} ${250 + 250 * Math.sin(sR)} A 250 250 0 0 1 ${250 + 250 * Math.cos(eR)} ${250 + 250 * Math.sin(eR)} Z`} fill={colors[i % colors.length]} stroke="#000" strokeWidth="1" strokeOpacity="0.1" />; })}</g>
-            <g id="labels-layer">{items.map((it, i) => { const st = 360 / items.length; const a = (i * st) + st / 2; return <text key={i} x={250 + 175 * Math.cos((a - 90) * Math.PI / 180)} y={255 + 175 * Math.sin((a - 90) * Math.PI / 180)} fill="white" fontSize="18" fontWeight="900" textAnchor="middle" dominantBaseline="middle" transform={`rotate(${a}, ${250 + 175 * Math.cos((a - 90) * Math.PI / 180)}, ${255 + 175 * Math.sin((a - 90) * Math.PI / 180)})`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>{it}</text>; })}</g>
-            <g id="pins-layer">{items.map((_, i) => { const st = 360 / items.length; const r = ((i + 1) * st - 90) * Math.PI / 180; return <g key={i}><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="10" fill="#fff" filter="url(#p-shad-l)" /><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="6" fill="#ddd" /></g>; })}</g>
-            <defs><filter id="p-shad-l"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.8" /></filter></defs>
-          </svg>
-        </motion.div>
-        <div style={{ position: 'absolute', top: '-28px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, pointerEvents: 'none' }}>
-          <motion.svg animate={{ rotate: arrowWiggle }} transition={{ duration: 0 }} width="20" height="70" viewBox="0 0 20 70" style={{ overflow: 'visible', filter: 'drop-shadow(0 0 10px #ff2eb4)' }}>
-            <path d="M 10 70 L 4 35 L 10 0 L 16 35 Z" fill="#ff2eb4" stroke="white" strokeWidth="1" />
-            <circle cx="10" cy="35" r="2.5" fill="white" />
-          </motion.svg>
+          <motion.div animate={{ rotate: rotation }} transition={{ duration: 0 }} style={{ width: '510px', height: '510px', position: 'relative' }}>
+            <svg viewBox="-45 -45 590 590" style={{ width: '590px', height: '590px', position: 'absolute', top: '-40px', left: '-40px', overflow: 'visible' }}>
+              <g id="pie-layer">
+                {slices.map((s, i) => <path key={i} d={arcPath(250, 250, 250, s.startDeg, s.sweepDeg)} fill={colors[i % colors.length]} stroke="#000" strokeWidth="1" strokeOpacity="0.15" />)}
+              </g>
+              <g id="labels-layer">
+                {slices.map((s, i) => {
+                  const midDeg = s.startDeg + s.sweepDeg / 2;
+                  const rad = (midDeg - 90) * Math.PI / 180;
+                  const lx = 250 + 175 * Math.cos(rad), ly = 255 + 175 * Math.sin(rad);
+                  const fontSize = s.sweepDeg < 15 ? 10 : s.sweepDeg < 25 ? 13 : 18;
+                  return (
+                    <text key={i} x={lx} y={ly} fill="white" fontSize={fontSize} fontWeight="900" textAnchor="middle" dominantBaseline="middle"
+                      transform={`rotate(${midDeg}, ${lx}, ${ly})`}>
+                      {s.label}{s.weight > 1 ? ` ×${s.weight}` : ''}
+                    </text>
+                  );
+                })}
+              </g>
+              <g id="pins-layer">
+                {slices.map((s, i) => { const r = (s.startDeg + s.sweepDeg - 90) * Math.PI / 180; return <g key={i}><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="10" fill="#fff" filter="url(#p-shad-l)" /><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="6" fill="#ddd" /></g>; })}
+              </g>
+              <defs><filter id="p-shad-l"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.8" /></filter></defs>
+            </svg>
+          </motion.div>
+          <div style={{ position: 'absolute', top: '-28px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, pointerEvents: 'none' }}>
+            <motion.svg animate={{ rotate: arrowWiggle }} transition={{ duration: 0 }} width="20" height="70" viewBox="0 0 20 70" style={{ overflow: 'visible', filter: 'drop-shadow(0 0 10px #ff2eb4)' }}>
+              <path d="M 10 70 L 4 35 L 10 0 L 16 35 Z" fill="#ff2eb4" stroke="white" strokeWidth="1" />
+              <circle cx="10" cy="35" r="2.5" fill="white" />
+            </motion.svg>
+          </div>
         </div>
+
+        {/* 설정 패널 */}
+        <div style={{ width: '380px', background: '#050505', border: '1px solid #111', padding: '30px', borderRadius: '25px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}>
+          <h2 style={{ color: '#ff2eb4', marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.4rem' }}><Settings2 /> SETTINGS</h2>
+          <div style={{ color: '#555', fontSize: '0.75rem', marginBottom: '12px' }}>※ "항목x숫자" 형식으로 비율 지정 (예: 치킨x3)</div>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <input value={newItem} onChange={e => setNewItem(e.target.value)} onKeyPress={e => e.key === 'Enter' && addItem(newItem)} placeholder="항목명 또는 항목x3" style={{ flex: 1, background: '#000', border: '1px solid #222', color: 'white', padding: '12px', borderRadius: '10px' }} />
+            <button onClick={() => addItem(newItem)} style={{ cursor: 'pointer', background: '#ff2eb4', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: 900 }}>ADD</button>
+          </div>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '20px' }}>
+            {items.map((it, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#111', borderRadius: '8px', marginBottom: '8px', borderLeft: `4px solid ${colors[idx % colors.length]}` }}>
+                <span style={{ flex: 1 }}>{it.label}</span>
+                {/* weight 조절 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
+                  <button onClick={() => setItems(prev => prev.map((x, i) => i === idx && x.weight > 1 ? { ...x, weight: x.weight - 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>−</button>
+                  <span style={{ color: colors[idx % colors.length], fontWeight: 900, minWidth: '28px', textAlign: 'center', fontSize: '0.85rem' }}>×{it.weight}</span>
+                  <button onClick={() => setItems(prev => prev.map((x, i) => i === idx ? { ...x, weight: x.weight + 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>+</button>
+                </div>
+                <Trash2 size={16} color="#444" style={{ cursor: 'pointer' }} onClick={() => setItems(items.filter((_, i) => i !== idx))} />
+              </div>
+            ))}
+          </div>
+          <button onClick={spinRoulette} disabled={isSpinning} style={{ cursor: 'pointer', width: '100%', background: isSpinning ? '#222' : 'linear-gradient(45deg, #ff2eb4, #2e96ff)', padding: '18px', borderRadius: '15px', color: 'white', fontWeight: 900, border: 'none' }}>SPIN ROULETTE</button>
+        </div>
+
+        <AnimatePresence>{winner && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '60px 100px', borderRadius: '40px', border: '5px solid #ff2eb4', textAlign: 'center', boxShadow: '0 0 100px rgba(255, 46, 180, 0.6)' }}><PartyPopper size={80} color="#ff2eb4" style={{ marginBottom: '25px' }} /><div style={{ color: 'white', fontSize: '4.8rem', fontWeight: 900, textShadow: '0 0 40px #ff2eb4' }}>{winner}</div><button onClick={() => setWinner(null)} style={{ cursor: 'pointer', marginTop: '40px', background: 'white', color: 'black', padding: '15px 70px', borderRadius: '15px', fontWeight: 900 }}>CLOSE</button></motion.div></motion.div>)}</AnimatePresence>
       </div>
-      <div style={{ width: '380px', background: '#050505', border: '1px solid #111', padding: '30px', borderRadius: '25px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}>
-        <h2 style={{ color: '#ff2eb4', marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.4rem' }}><Settings2 /> SETTINGS</h2>
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}><input value={newItem} onChange={e => setNewItem(e.target.value)} onKeyPress={e => e.key === 'Enter' && (setItems([...items, newItem]), setNewItem(''))} placeholder="Entry Item" style={{ flex: 1, background: '#000', border: '1px solid #222', color: 'white', padding: '12px', borderRadius: '10px' }} /><button onClick={() => { if (newItem) setItems([...items, newItem]); setNewItem(''); }} style={{ cursor: 'pointer', background: '#ff2eb4', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: 900 }}>ADD</button></div>
-        <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '20px' }}>{items.map((it, idx) => (<div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: '#111', borderRadius: '8px', marginBottom: '8px', borderLeft: `4px solid ${colors[idx % colors.length]}` }}><span>{it}</span><Trash2 size={16} color="#444" style={{ cursor: 'pointer' }} onClick={() => setItems(items.filter((_, i) => i !== idx))} /></div>))}</div>
-        <button onClick={spinRoulette} disabled={isSpinning} style={{ cursor: 'pointer', width: '100%', background: isSpinning ? '#222' : 'linear-gradient(45deg, #ff2eb4, #2e96ff)', padding: '18px', borderRadius: '15px', color: 'white', fontWeight: 900, border: 'none' }}>SPIN ROULETTE</button>
-      </div>
-      <AnimatePresence>{winner && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '60px 100px', borderRadius: '40px', border: '5px solid #ff2eb4', textAlign: 'center', boxShadow: '0 0 100px rgba(255, 46, 180, 0.6)' }}><PartyPopper size={80} color="#ff2eb4" style={{ marginBottom: '25px' }} /><div style={{ color: 'white', fontSize: '4.8rem', fontWeight: 900, textShadow: '0 0 40px #ff2eb4' }}>{winner}</div><button onClick={() => setWinner(null)} style={{ cursor: 'pointer', marginTop: '40px', background: 'white', color: 'black', padding: '15px 70px', borderRadius: '15px', fontWeight: 900 }}>CLOSE</button></motion.div></motion.div>)}</AnimatePresence>
-    </div>
     </div>
   );
+};
+
+// ─────────────────────────────────────────────
+// 🎯 핀볼 게임
+// ─────────────────────────────────────────────
+const PinballGame: React.FC = () => {
+  const CW = 560, CH = 2800;
+  const GRAVITY = 0.18;
+  const BALL_R = 10;
+  const BALL_COLORS = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff922b', '#cc5de8', '#f06595', '#00ffa3'];
+
+  type Ball = { x: number; y: number; vx: number; vy: number; r: number; color: string; active: boolean; trail: { x: number; y: number }[] };
+  type PegObs     = { kind: 'peg';     x: number; y: number; r: number };
+  type BumperObs  = { kind: 'bumper';  x: number; y: number; r: number; label: string; pts: number; hitTime: number };
+  type RampObs    = { kind: 'ramp';    x1: number; y1: number; x2: number; y2: number };
+  type SpinnerObs = { kind: 'spinner'; cx: number; cy: number; len: number; angle: number; speed: number };
+  type Obstacle = PegObs | BumperObs | RampObs | SpinnerObs;
+  type GoalSlot = { x: number; w: number; label: string; color: string; pts: number; count: number };
+
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const scrollRef  = useRef<HTMLDivElement>(null);
+  const ballsRef   = useRef<Ball[]>([]);
+  const obsRef     = useRef<Obstacle[]>([]);
+  const [totalScore, setTotalScore] = useState(0);
+  const [ballCount, setBallCount]   = useState(0);
+  const totalScoreRef = useRef(0);
+
+  // 6 슬롯 — 가운데 JACKPOT
+  const SLOT_W = Math.floor(CW / 6);
+  const INIT_GOALS: GoalSlot[] = [
+    { x: 0,          w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
+    { x: SLOT_W,     w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
+    { x: SLOT_W * 2, w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
+    { x: SLOT_W * 3, w: SLOT_W, label: '💎JACKPOT', color: '#ffd700', pts: 1, count: 0 },
+    { x: SLOT_W * 4, w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
+    { x: SLOT_W * 5, w: CW - SLOT_W * 5, label: '꽝', color: '#555', pts: 0, count: 0 },
+  ];
+  const goalsRef = useRef<GoalSlot[]>(INIT_GOALS.map(g => ({ ...g })));
+  const [goals, setGoals] = useState<GoalSlot[]>(INIT_GOALS);
+
+  // Build obstacles once
+  useEffect(() => {
+    const obs: Obstacle[] = [];
+    const wideXs  = [45, 125, 205, 285, 365, 445, 515];  // 7 pegs
+    const narrowXs = [85, 165, 245, 325, 405, 480];       // 6 pegs
+
+    // 구역별 장애물 구성
+    // ── Zone 0: 진입 램프 (y 80~180) ──
+    obs.push({ kind: 'ramp', x1: 0,  y1: 80,  x2: 100, y2: 170 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 80,  x2: CW - 100, y2: 170 });
+
+    // ── Zone 1: 첫 번째 핀 구역 (y 190~430) ──
+    const z1rows = [190, 235, 280, 325, 370, 415];
+    z1rows.forEach((y, i) => {
+      const xs = i % 2 === 0 ? wideXs : narrowXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+    obs.push({ kind: 'spinner', cx: 140, cy: 253, len: 38, angle: 0,            speed: 0.04 });
+    obs.push({ kind: 'spinner', cx: 420, cy: 253, len: 38, angle: Math.PI / 2, speed: -0.04 });
+
+    // ── Zone 2: 범퍼 구역 1 (y 460~640) ──
+    obs.push({ kind: 'bumper', x: 140, y: 530, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 490, r: 32, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 420, y: 530, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'ramp', x1: 0,  y1: 460, x2: 80,       y2: 500 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 460, x2: CW - 80,  y2: 500 });
+    [590, 635].forEach((y, i) => {
+      const xs = i % 2 === 0 ? narrowXs : wideXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+
+    // ── Zone 3: 두 번째 핀 구역 (y 680~950) ──
+    const z3rows = [680, 725, 770, 815, 860, 905, 950];
+    z3rows.forEach((y, i) => {
+      const xs = i % 2 === 0 ? wideXs : narrowXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+    // 다이아몬드 램프
+    obs.push({ kind: 'ramp', x1: 200, y1: 780, x2: 280, y2: 820 });
+    obs.push({ kind: 'ramp', x1: 360, y1: 780, x2: 280, y2: 820 });
+
+    // ── Zone 4: 스피너 구역 (y 980~1150) ──
+    obs.push({ kind: 'spinner', cx: 100, cy: 1040, len: 45, angle: 0,              speed:  0.05 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 1010, len: 45, angle: Math.PI / 3,    speed: -0.05 });
+    obs.push({ kind: 'spinner', cx: 460, cy: 1040, len: 45, angle: Math.PI * 0.7,  speed:  0.05 });
+    [1090, 1135].forEach((y, i) => {
+      const xs = i % 2 === 0 ? narrowXs : wideXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+
+    // ── Zone 5: 세 번째 핀 구역 (y 1175~1490) ──
+    const z5rows = [1175, 1220, 1265, 1310, 1355, 1400, 1445, 1490];
+    z5rows.forEach((y, i) => {
+      const xs = i % 2 === 0 ? wideXs : narrowXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+
+    // ── Zone 6: 범퍼 구역 2 (y 1530~1720) ──
+    obs.push({ kind: 'bumper', x: 100, y: 1590, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 1550, r: 32, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 460, y: 1590, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'ramp', x1: 0,  y1: 1530, x2: 55,       y2: 1570 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 1530, x2: CW - 55,  y2: 1570 });
+    [1660, 1710].forEach((y, i) => {
+      const xs = i % 2 === 0 ? narrowXs : wideXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+
+    // ── Zone 7: 네 번째 핀 구역 (y 1755~2020) ──
+    const z7rows = [1755, 1800, 1845, 1890, 1935, 1980, 2025];
+    z7rows.forEach((y, i) => {
+      const xs = i % 2 === 0 ? wideXs : narrowXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+    obs.push({ kind: 'spinner', cx: 180, cy: 1867, len: 40, angle: 0,          speed: -0.04 });
+    obs.push({ kind: 'spinner', cx: 380, cy: 1867, len: 40, angle: Math.PI/2,  speed:  0.04 });
+
+    // ── Zone 8: 다섯 번째 핀 구역 (y 2065~2330) ──
+    const z8rows = [2065, 2110, 2155, 2200, 2245, 2290, 2335];
+    z8rows.forEach((y, i) => {
+      const xs = i % 2 === 0 ? wideXs : narrowXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+
+    // ── Zone 9: 범퍼 구역 3 + 마지막 핀 (y 2360~2600) ──
+    obs.push({ kind: 'bumper', x: 180, y: 2400, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 380, y: 2400, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    const z9rows = [2450, 2495, 2540, 2585, 2630];
+    z9rows.forEach((y, i) => {
+      const xs = i % 2 === 0 ? wideXs : narrowXs;
+      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
+    });
+
+    // ── 최종 깔때기 램프 (y 2670~2750) ──
+    obs.push({ kind: 'ramp', x1: 0,  y1: 2660, x2: SLOT_W * 3,       y2: 2740 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 2660, x2: SLOT_W * 3 + SLOT_W, y2: 2740 });
+
+    obsRef.current = obs;
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    let animId: number;
+
+    // ─── Collision helpers ───
+    const collideBallCircle = (ball: Ball, cx: number, cy: number, cr: number, restitution: number, boost = 0): boolean => {
+      const dx = ball.x - cx, dy = ball.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minD = ball.r + cr;
+      if (dist < minD && dist > 0.001) {
+        const nx = dx / dist, ny = dy / dist;
+        ball.x += nx * (minD - dist);
+        ball.y += ny * (minD - dist);
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx = (ball.vx - 2 * dot * nx) * restitution + nx * boost;
+        ball.vy = (ball.vy - 2 * dot * ny) * restitution + ny * boost;
+        return true;
+      }
+      return false;
+    };
+
+    const collideBallSegment = (ball: Ball, x1: number, y1: number, x2: number, y2: number) => {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len2 = dx * dx + dy * dy;
+      if (len2 === 0) return;
+      const t = Math.max(0, Math.min(1, ((ball.x - x1) * dx + (ball.y - y1) * dy) / len2));
+      const cx = x1 + t * dx, cy = y1 + t * dy;
+      const ex = ball.x - cx, ey = ball.y - cy;
+      const dist = Math.sqrt(ex * ex + ey * ey);
+      if (dist < ball.r && dist > 0.001) {
+        const nx = ex / dist, ny = ey / dist;
+        ball.x += nx * (ball.r - dist);
+        ball.y += ny * (ball.r - dist);
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx = (ball.vx - 2 * dot * nx) * 0.55;
+        ball.vy = (ball.vy - 2 * dot * ny) * 0.55;
+      }
+    };
+
+    // ─── Update physics ───
+    const update = () => {
+      const now = Date.now();
+      // Rotate spinners
+      for (const obs of obsRef.current) {
+        if (obs.kind === 'spinner') obs.angle += obs.speed;
+      }
+
+      for (const ball of ballsRef.current) {
+        if (!ball.active) continue;
+        ball.vy += GRAVITY;
+        ball.vx *= 0.999;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        // Trail
+        ball.trail.push({ x: ball.x, y: ball.y });
+        if (ball.trail.length > 10) ball.trail.shift();
+
+        // Wall bounce
+        if (ball.x - ball.r < 0)  { ball.x = ball.r; ball.vx = Math.abs(ball.vx) * 0.65; }
+        if (ball.x + ball.r > CW) { ball.x = CW - ball.r; ball.vx = -Math.abs(ball.vx) * 0.65; }
+
+        // Obstacles
+        for (const obs of obsRef.current) {
+          if (obs.kind === 'peg') {
+            collideBallCircle(ball, obs.x, obs.y, obs.r, 0.62);
+          } else if (obs.kind === 'bumper') {
+            const hit = collideBallCircle(ball, obs.x, obs.y, obs.r, 0.92, 6);
+            if (hit) {
+              obs.hitTime = now;
+            }
+          } else if (obs.kind === 'ramp') {
+            collideBallSegment(ball, obs.x1, obs.y1, obs.x2, obs.y2);
+          } else if (obs.kind === 'spinner') {
+            const cos = Math.cos(obs.angle), sin = Math.sin(obs.angle);
+            collideBallSegment(ball,
+              obs.cx - cos * obs.len, obs.cy - sin * obs.len,
+              obs.cx + cos * obs.len, obs.cy + sin * obs.len
+            );
+          }
+        }
+
+        // Goal detection
+        if (ball.y + ball.r > CH - 45 && ball.active) {
+          ball.active = false;
+          const gIdx = goalsRef.current.findIndex(g => ball.x >= g.x && ball.x < g.x + g.w);
+          if (gIdx >= 0) {
+            const updated = goalsRef.current.map((g, i) => i === gIdx ? { ...g, count: g.count + 1 } : g);
+            goalsRef.current = updated;
+            setGoals([...updated]);
+            if (goalsRef.current[gIdx].pts > 0) {
+              totalScoreRef.current += 1;
+              setTotalScore(totalScoreRef.current);
+            }
+          }
+        }
+      }
+      ballsRef.current = ballsRef.current.filter(b => b.active || b.y < CH + 80);
+    };
+
+    // ─── Render ───
+    const render = () => {
+      const now = Date.now();
+      ctx.clearRect(0, 0, CW, CH);
+
+      // Background gradient
+      const bg = ctx.createLinearGradient(0, 0, 0, CH);
+      bg.addColorStop(0, '#080818');
+      bg.addColorStop(1, '#0a0a0a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, CW, CH);
+
+      // Border
+      ctx.strokeStyle = '#1a1a3a';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(1.5, 1.5, CW - 3, CH - 3);
+
+      // ─── Ramps ───
+      for (const obs of obsRef.current) {
+        if (obs.kind !== 'ramp') continue;
+        ctx.save();
+        ctx.shadowColor = '#00ffa3';
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#00ffa3';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(obs.x1, obs.y1);
+        ctx.lineTo(obs.x2, obs.y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ─── Spinners ───
+      for (const obs of obsRef.current) {
+        if (obs.kind !== 'spinner') continue;
+        const cos = Math.cos(obs.angle), sin = Math.sin(obs.angle);
+        ctx.save();
+        ctx.shadowColor = '#cc5de8';
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = '#cc5de8';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(obs.cx - cos * obs.len, obs.cy - sin * obs.len);
+        ctx.lineTo(obs.cx + cos * obs.len, obs.cy + sin * obs.len);
+        ctx.stroke();
+        // Center pivot
+        ctx.beginPath();
+        ctx.arc(obs.cx, obs.cy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#cc5de8';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ─── Pegs ───
+      for (const obs of obsRef.current) {
+        if (obs.kind !== 'peg') continue;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
+        const pg = ctx.createRadialGradient(obs.x - 2, obs.y - 2, 1, obs.x, obs.y, obs.r);
+        pg.addColorStop(0, '#e0e8ff');
+        pg.addColorStop(1, '#8090c0');
+        ctx.fillStyle = pg;
+        ctx.shadowColor = '#6080ff';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ─── Bumpers ───
+      for (const obs of obsRef.current) {
+        if (obs.kind !== 'bumper') continue;
+        const isHit = now - obs.hitTime < 250;
+        const baseCol = obs.label === '💎' ? '#ffd700' : '#ff6b6b';
+        ctx.save();
+        const grd = ctx.createRadialGradient(obs.x, obs.y, 2, obs.x, obs.y, obs.r);
+        grd.addColorStop(0, isHit ? '#ffffff' : baseCol);
+        grd.addColorStop(0.6, isHit ? baseCol : baseCol + '99');
+        grd.addColorStop(1, baseCol + '22');
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.shadowColor = baseCol;
+        ctx.shadowBlur = isHit ? 40 : 18;
+        ctx.fill();
+        ctx.strokeStyle = isHit ? '#fff' : baseCol;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = isHit ? '#000' : '#fff';
+        ctx.font = `bold ${obs.label === '💎' ? 16 : 10}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 0;
+        ctx.fillText(obs.label, obs.x, obs.y);
+        ctx.restore();
+      }
+
+      // ─── Balls (trail + sphere) ───
+      for (const ball of ballsRef.current) {
+        if (!ball.active && ball.y > CH) continue;
+        // Trail
+        for (let i = 0; i < ball.trail.length; i++) {
+          const alpha = (i / ball.trail.length) * 0.35;
+          const trailR = ball.r * ((i + 1) / ball.trail.length) * 0.75;
+          ctx.beginPath();
+          ctx.arc(ball.trail[i].x, ball.trail[i].y, trailR, 0, Math.PI * 2);
+          const hex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
+          ctx.fillStyle = ball.color + hex;
+          ctx.fill();
+        }
+        // Sphere gradient
+        const sg = ctx.createRadialGradient(ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.1, ball.x, ball.y, ball.r);
+        sg.addColorStop(0, '#ffffff');
+        sg.addColorStop(0.35, ball.color);
+        sg.addColorStop(1, ball.color + '66');
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        ctx.fillStyle = sg;
+        ctx.shadowColor = ball.color;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ─── Goal slots ───
+      const gY = CH - 48;
+      // Divider pins
+      for (const g of goalsRef.current) {
+        ctx.fillStyle = '#888';
+        ctx.fillRect(g.x, gY - 14, 3, 62);
+      }
+      ctx.fillStyle = '#888';
+      ctx.fillRect(CW - 3, gY - 14, 3, 62);
+
+      for (const g of goalsRef.current) {
+        ctx.save();
+        ctx.fillStyle = g.color + '44';
+        ctx.fillRect(g.x + 3, gY, g.w - 3, 48);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = g.color;
+        ctx.shadowColor = g.color;
+        ctx.shadowBlur = g.pts >= 100 ? 12 : 0;
+        ctx.fillText(g.label, g.x + g.w / 2, gY + 15);
+        ctx.shadowBlur = 0;
+        if (g.count > 0) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.fillText(`×${g.count}`, g.x + g.w / 2, gY + 34);
+        }
+        ctx.restore();
+      }
+
+      // ─── Launch zone marker ───
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = '#ffffff18';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 30);
+      ctx.lineTo(CW, 30);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    };
+
+    const loop = () => { update(); render(); animId = requestAnimationFrame(loop); };
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  const addBall = (n = 1) => {
+    for (let i = 0; i < n; i++) {
+      const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+      const x = 55 + Math.random() * (CW - 110);
+      ballsRef.current.push({ x, y: 15 + Math.random() * 20, vx: (Math.random() - 0.5) * 3, vy: 0, r: BALL_R, color, active: true, trail: [] });
+    }
+    setBallCount(c => c + n);
+    // 투하 시 스크롤 맨 위로
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  };
+
+  const resetGame = () => {
+    ballsRef.current = [];
+    const fresh = INIT_GOALS.map(g => ({ ...g }));
+    goalsRef.current = fresh;
+    setGoals(fresh);
+    totalScoreRef.current = 0;
+    setTotalScore(0);
+    setBallCount(0);
+  };
+
+  const btnStyle = (color: string): React.CSSProperties => ({
+    cursor: 'pointer', width: '100%', padding: '12px', borderRadius: '12px',
+    border: `1px solid ${color}44`, background: color + '22', color,
+    fontWeight: 900, fontSize: '0.9rem',
+  });
+
+  return (
+    <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start', justifyContent: 'center', padding: '10px 0' }}>
+      {/* Canvas — 스크롤 가능 */}
+      <div ref={scrollRef} style={{ height: '720px', overflowY: 'scroll', borderRadius: '12px', border: '2px solid #1a1a3a', boxShadow: '0 0 40px rgba(0,100,255,0.15)', scrollbarWidth: 'thin', scrollbarColor: '#333 #111' }}>
+        <canvas ref={canvasRef} width={CW} height={CH}
+          style={{ display: 'block' }} />
+      </div>
+
+      {/* Control panel */}
+      <div style={{ width: '200px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Score */}
+        <div style={{ background: '#111', borderRadius: '16px', padding: '20px', textAlign: 'center', border: '1px solid #ffd70033' }}>
+          <div style={{ color: '#888', fontSize: '0.75rem', marginBottom: '6px', fontWeight: 700 }}>💎 JACKPOT</div>
+          <div style={{ color: '#ffd700', fontSize: '2.8rem', fontWeight: 900, textShadow: '0 0 24px #ffd700aa' }}>{totalScore}</div>
+          <div style={{ color: '#555', fontSize: '0.72rem', marginTop: '6px' }}>공 {ballCount}개 발사됨</div>
+        </div>
+
+        {/* Buttons */}
+        <button onClick={() => addBall(1)} style={btnStyle('#00ffa3')}>🎱 공 1개 추가</button>
+        <button onClick={() => addBall(5)} style={btnStyle('#4d96ff')}>🎱 공 5개 추가</button>
+        <button onClick={() => addBall(10)} style={btnStyle('#ff922b')}>🎱 공 10개 추가</button>
+        <button onClick={resetGame} style={btnStyle('#ff4b4b')}>🔄 초기화</button>
+
+        {/* Legend */}
+        <div style={{ background: '#0a0a0a', borderRadius: '12px', padding: '14px', border: '1px solid #1a1a1a', fontSize: '0.75rem' }}>
+          <div style={{ color: '#666', fontWeight: 900, marginBottom: '10px' }}>장애물 종류</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <div style={{ color: '#8090c0' }}>⚪ 핀 — 기본 튕김</div>
+            <div style={{ color: '#ff6b6b' }}>🔴 범퍼 — 강한 반발</div>
+            <div style={{ color: '#00ffa3' }}>📐 램프 — 방향 유도</div>
+            <div style={{ color: '#cc5de8' }}>🌀 스피너 — 회전 막대</div>
+          </div>
+        </div>
+
+        {/* Jackpot count */}
+        <div style={{ background: '#ffd70011', borderRadius: '12px', padding: '14px', border: '1px solid #ffd70033', textAlign: 'center' }}>
+          <div style={{ color: '#ffd700', fontSize: '0.75rem', fontWeight: 900, marginBottom: '6px' }}>JACKPOT 횟수</div>
+          <div style={{ color: '#ffd700', fontSize: '1.8rem', fontWeight: 900 }}>
+            {goals.find(g => g.pts > 0)?.count ?? 0}
+          </div>
+          <div style={{ color: '#555', fontSize: '0.7rem', marginTop: '4px' }}>꽝: {goals.filter(g => g.pts === 0).reduce((s, g) => s + g.count, 0)}회</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// OBS 오버레이 진입점 — 모든 컴포넌트 정의 후 마지막에 위치
+const App: React.FC = () => {
+  const isOverlay = new URLSearchParams(window.location.search).get('overlay') === 'true';
+
+  useEffect(() => {
+    if (isOverlay) {
+      document.body.classList.add('overlay-mode');
+      document.getElementById('root')?.classList.add('overlay-root');
+    }
+    return () => {
+      document.body.classList.remove('overlay-mode');
+      document.getElementById('root')?.classList.remove('overlay-root');
+    };
+  }, [isOverlay]);
+
+  if (isOverlay) return <HamsterOverlay />;
+  return <AppMain />;
 };
 
 export default App;
