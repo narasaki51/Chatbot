@@ -34,6 +34,11 @@ const saveMissions = (missions: any) => fs.writeFileSync(DB_PATH, JSON.stringify
 
 const client = new ChzzkClient();
 
+// 룰렛 추가를 후원자에게만 허용할지 여부
+let isDonationOnly = true;
+// 메인 미션 등록을 후원자에게만 허용할지 여부
+let isMissionDonationOnly = false;
+
 // 민심판독기 상태 (기본 50%)
 let posMatchCount = 0;
 let negMatchCount = 0;
@@ -77,32 +82,38 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
   // 민심 분석 실행 (모든 메시지 대상)
   analyzeSentiment(content);
 
-  // 일반 미션 등록 (!미션)
+  // 일반 미션 등록 (!미션) - 미션 도네이션 전용 모드에 따라 분기
   if (content.startsWith('!미션 ')) {
+    if (isMissionDonationOnly && !isDonation) {
+      console.log(`🚫 [Mission Blocked] General chat mission ignored. (User: ${sender})`);
+      return; 
+    }
     const missionContent = content.replace('!미션 ', '').trim();
-    const newMission = {
-      id: Date.now().toString(),
-      creator: sender,
-      content: missionContent,
-      status: 'pending',
-      timestamp: new Date().toISOString(),
-      type: 'main'
-    };
-    const rogadaMission = {
-      id: (Date.now() + 1).toString(),
-      creator: sender,
-      target: '찌모',
-      content: missionContent,
-      status: 'pending',
-      timestamp: new Date().toISOString(),
-      type: 'rogada'
-    };
-    const missions = getMissions();
-    missions.push(newMission, rogadaMission);
-    saveMissions(missions);
-    io.emit('newMission', newMission);
-    io.emit('newMission', rogadaMission);
-    console.log(`✨ [New Mission] ${sender}: ${missionContent}`);
+    if (missionContent) {
+      const newMission = {
+        id: Date.now().toString(),
+        creator: sender,
+        content: missionContent,
+        status: 'pending',
+        timestamp: new Date().toISOString(),
+        type: 'main'
+      };
+      const rogadaMission = {
+        id: (Date.now() + 1).toString(),
+        creator: sender,
+        target: '찌모',
+        content: missionContent,
+        status: 'pending',
+        timestamp: new Date().toISOString(),
+        type: 'rogada'
+      };
+      const missions = getMissions();
+      missions.push(newMission, rogadaMission);
+      saveMissions(missions);
+      io.emit('newMission', newMission);
+      io.emit('newMission', rogadaMission);
+      console.log(`✨ [New Mission] ${sender}: ${missionContent} (Donation: ${isDonation})`);
+    }
   }
 
   // 로가다 개인 보드 미션 등록 (!(이름) 내용)
@@ -149,12 +160,12 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
     console.log(`🔒 [Private Mission - 찌모] ${sender}: ${missionContent}`);
   }
 
-  // 룰렛 추가 명령어 (!룰렛추가) - 예: 후원시에만
-  if (isDonation && content.startsWith('!룰렛추가 ')) {
+  // 룰렛 추가 명령어 (!룰렛추가) - 도네이션 전용 모드에 따라 분기
+  if ((isDonation || !isDonationOnly) && content.startsWith('!룰렛추가 ')) {
     const rouletteContent = content.replace('!룰렛추가 ', '').trim();
     if (rouletteContent) {
       io.emit('addRouletteItem', rouletteContent);
-      console.log(`🎡 [Roulette Item Added] ${sender} -> ${rouletteContent}`);
+      console.log(`🎡 [Roulette Item Added] ${sender} -> ${rouletteContent} (Mode: ${isDonationOnly ? 'DonationOnly' : 'AllChat'})`);
     }
   }
 };
@@ -204,6 +215,15 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
     saveMissions(missions);
     io.emit('newMission', newMission);
     console.log(`🔒 [Private Mission - ${member}] ${sender}: ${missionContent}`);
+  }
+
+  // 개별 채널에서 `!룰렛추가 내용` 처리
+  if ((isDonation || !isDonationOnly) && content.startsWith('!룰렛추가 ')) {
+    const rouletteContent = content.replace('!룰렛추가 ', '').trim();
+    if (rouletteContent) {
+      io.emit('addRouletteItem', rouletteContent);
+      console.log(`🎡 [Member Channel Roulette] ${member} -> ${sender}: ${rouletteContent}`);
+    }
   }
 };
 
@@ -376,6 +396,25 @@ app.post('/disconnect-member', (req, res) => {
     io.emit('memberDisconnected', member);
   }
   res.json({ success: true, member });
+});
+
+// 도네이션 전용 모드 관리 API
+app.get('/donation-only', (req, res) => res.json({ enabled: isDonationOnly }));
+app.post('/donation-only', (req, res) => {
+  const { enabled } = req.body;
+  isDonationOnly = !!enabled;
+  io.emit('donationOnlyUpdate', isDonationOnly);
+  console.log(`⚙️ [Config Change] Roulette Donation Only Mode: ${isDonationOnly}`);
+  res.json({ success: true, enabled: isDonationOnly });
+});
+
+app.get('/mission-donation-only', (req, res) => res.json({ enabled: isMissionDonationOnly }));
+app.post('/mission-donation-only', (req, res) => {
+  const { enabled } = req.body;
+  isMissionDonationOnly = !!enabled;
+  io.emit('missionDonationOnlyUpdate', isMissionDonationOnly);
+  console.log(`⚙️ [Config Change] Mission Donation Only Mode: ${isMissionDonationOnly}`);
+  res.json({ success: true, enabled: isMissionDonationOnly });
 });
 
 const PORT = process.env.PORT || 4000;
