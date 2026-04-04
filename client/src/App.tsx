@@ -578,8 +578,6 @@ const HamsterSprite: React.FC<{ colorIdx: number; row: SpriteRow; frame: number 
   const color = HAMSTER_COLORS[colorIdx % HAMSTER_COLORS.length];
   const { y, h } = SPRITE_ROWS[row];
   const rowDispH = Math.round(h * SPRITE_SCALE);
-  // 고정 높이 컨테이너에서 하단 정렬 — 발 위치를 항상 동일하게 유지
-  const topOffset = DISP_H - rowDispH;
   return (
     <div style={{ width: DISP_W, height: DISP_H, position: 'relative' }}>
       <div style={{
