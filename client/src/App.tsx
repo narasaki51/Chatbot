@@ -1403,7 +1403,8 @@ const PinballGame: React.FC = () => {
   const BALL_R = 10;
   const BALL_COLORS = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff922b', '#cc5de8', '#f06595', '#00ffa3'];
 
-  type Ball = { x: number; y: number; vx: number; vy: number; r: number; color: string; active: boolean; trail: { x: number; y: number }[] };
+  type Ball = { x: number; y: number; vx: number; vy: number; r: number; color: string; active: boolean; trail: { x: number; y: number }[]; name: string; slowFrames: number };
+  type PendingBall = { name: string; color: string };
   type PegObs     = { kind: 'peg';     x: number; y: number; r: number };
   type BumperObs  = { kind: 'bumper';  x: number; y: number; r: number; label: string; pts: number; hitTime: number };
   type RampObs    = { kind: 'ramp';    x1: number; y1: number; x2: number; y2: number };
@@ -1415,9 +1416,15 @@ const PinballGame: React.FC = () => {
   const scrollRef  = useRef<HTMLDivElement>(null);
   const ballsRef   = useRef<Ball[]>([]);
   const obsRef     = useRef<Obstacle[]>([]);
+  const pendingRef = useRef<PendingBall[]>([]);
+  const [pending, setPending]       = useState<PendingBall[]>([]);
+  const [newBallName, setNewBallName] = useState('');
   const [totalScore, setTotalScore] = useState(0);
   const [ballCount, setBallCount]   = useState(0);
   const totalScoreRef = useRef(0);
+  const [lastArrival, setLastArrival] = useState<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
+  const lastArrivedRef  = useRef<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
+  const lastArrivalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 6 슬롯 — 가운데 JACKPOT
   const SLOT_W = Math.floor(CW / 6);
@@ -1469,9 +1476,6 @@ const PinballGame: React.FC = () => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
-    // 다이아몬드 램프
-    obs.push({ kind: 'ramp', x1: 200, y1: 780, x2: 280, y2: 820 });
-    obs.push({ kind: 'ramp', x1: 360, y1: 780, x2: 280, y2: 820 });
 
     // ── Zone 4: 스피너 구역 (y 980~1150) ──
     obs.push({ kind: 'spinner', cx: 100, cy: 1040, len: 45, angle: 0,              speed:  0.05 });
@@ -1488,11 +1492,17 @@ const PinballGame: React.FC = () => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
+    // Zone 5 중간 스피너 (속도 다양)
+    obs.push({ kind: 'spinner', cx:  80, cy: 1290, len: 36, angle: 0,            speed:  0.09 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 1330, len: 50, angle: Math.PI*0.5,  speed: -0.03 });
+    obs.push({ kind: 'spinner', cx: 480, cy: 1290, len: 36, angle: Math.PI*0.8,  speed:  0.12 });
 
     // ── Zone 6: 범퍼 구역 2 (y 1530~1720) ──
-    obs.push({ kind: 'bumper', x: 100, y: 1590, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 1550, r: 32, label: '💎',   pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 460, y: 1590, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x:  80, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 185, y: 1555, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 1590, r: 30, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 375, y: 1555, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 480, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     obs.push({ kind: 'ramp', x1: 0,  y1: 1530, x2: 55,       y2: 1570 });
     obs.push({ kind: 'ramp', x1: CW, y1: 1530, x2: CW - 55,  y2: 1570 });
     [1660, 1710].forEach((y, i) => {
@@ -1506,8 +1516,12 @@ const PinballGame: React.FC = () => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
-    obs.push({ kind: 'spinner', cx: 180, cy: 1867, len: 40, angle: 0,          speed: -0.04 });
+    obs.push({ kind: 'spinner', cx: 180, cy: 1867, len: 40, angle: 0,           speed: -0.04 });
     obs.push({ kind: 'spinner', cx: 380, cy: 1867, len: 40, angle: Math.PI/2,  speed:  0.04 });
+    // Zone 7 추가 스피너 (빠른 것 / 느린 것 혼합)
+    obs.push({ kind: 'spinner', cx: 280, cy: 1960, len: 55, angle: Math.PI*0.3, speed: -0.10 });
+    obs.push({ kind: 'spinner', cx:  60, cy: 2000, len: 32, angle: Math.PI*0.7, speed:  0.15 });
+    obs.push({ kind: 'spinner', cx: 500, cy: 2000, len: 32, angle: Math.PI*1.2, speed: -0.07 });
 
     // ── Zone 8: 다섯 번째 핀 구역 (y 2065~2330) ──
     const z8rows = [2065, 2110, 2155, 2200, 2245, 2290, 2335];
@@ -1515,15 +1529,26 @@ const PinballGame: React.FC = () => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
+    // Zone 8 중간 스피너 (속도 다양)
+    obs.push({ kind: 'spinner', cx: 140, cy: 2170, len: 42, angle: Math.PI*0.2,  speed:  0.08 });
+    obs.push({ kind: 'spinner', cx: 420, cy: 2170, len: 42, angle: Math.PI*1.1,  speed: -0.13 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 2260, len: 48, angle: Math.PI*0.6,  speed:  0.05 });
 
     // ── Zone 9: 범퍼 구역 3 + 마지막 핀 (y 2360~2600) ──
-    obs.push({ kind: 'bumper', x: 180, y: 2400, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 380, y: 2400, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 100, y: 2390, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 210, y: 2360, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 2400, r: 30, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 350, y: 2360, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 460, y: 2390, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     const z9rows = [2450, 2495, 2540, 2585, 2630];
     z9rows.forEach((y, i) => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
+
+    // ── 골 근처 대형 스피너 2개 (좌/우) ──
+    obs.push({ kind: 'spinner', cx: 185, cy: 2700, len: 110, angle: 0,         speed: -0.06 });
+    obs.push({ kind: 'spinner', cx: 430, cy: 2700, len: 110, angle: Math.PI/2, speed:  0.06 });
 
     // ── 최종 깔때기 램프 (y 2670~2750) ──
     obs.push({ kind: 'ramp', x1: 0,  y1: 2660, x2: SLOT_W * 3,       y2: 2740 });
@@ -1574,64 +1599,118 @@ const PinballGame: React.FC = () => {
     };
 
     // ─── Update physics ───
+    const MAX_SPEED = 15;
+    const SUBSTEPS  = 2;
     const update = () => {
       const now = Date.now();
-      // Rotate spinners
+      // Rotate spinners (1회만)
       for (const obs of obsRef.current) {
         if (obs.kind === 'spinner') obs.angle += obs.speed;
       }
 
       for (const ball of ballsRef.current) {
         if (!ball.active) continue;
-        ball.vy += GRAVITY;
-        ball.vx *= 0.999;
-        ball.x += ball.vx;
-        ball.y += ball.vy;
 
-        // Trail
+        // Trail (서브스텝 전 한 번)
         ball.trail.push({ x: ball.x, y: ball.y });
         if (ball.trail.length > 10) ball.trail.shift();
 
-        // Wall bounce
-        if (ball.x - ball.r < 0)  { ball.x = ball.r; ball.vx = Math.abs(ball.vx) * 0.65; }
-        if (ball.x + ball.r > CW) { ball.x = CW - ball.r; ball.vx = -Math.abs(ball.vx) * 0.65; }
+        // 서브스텝: 속도를 잘게 나눠 충돌 검사 → 터널링 방지
+        for (let step = 0; step < SUBSTEPS; step++) {
+          ball.vy += GRAVITY / SUBSTEPS;
+          ball.vx *= Math.pow(0.999, 1 / SUBSTEPS);
+          ball.x  += ball.vx / SUBSTEPS;
+          ball.y  += ball.vy / SUBSTEPS;
 
-        // Obstacles
-        for (const obs of obsRef.current) {
-          if (obs.kind === 'peg') {
-            collideBallCircle(ball, obs.x, obs.y, obs.r, 0.62);
-          } else if (obs.kind === 'bumper') {
-            const hit = collideBallCircle(ball, obs.x, obs.y, obs.r, 0.92, 6);
-            if (hit) {
-              obs.hitTime = now;
+          // 최대 속도 제한
+          const spd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+          if (spd > MAX_SPEED) { ball.vx = ball.vx / spd * MAX_SPEED; ball.vy = ball.vy / spd * MAX_SPEED; }
+
+          // Wall bounce
+          if (ball.x - ball.r < 0)  { ball.x = ball.r; ball.vx = Math.abs(ball.vx) * 0.65; }
+          if (ball.x + ball.r > CW) { ball.x = CW - ball.r; ball.vx = -Math.abs(ball.vx) * 0.65; }
+
+          // Obstacles
+          for (const obs of obsRef.current) {
+            if (obs.kind === 'peg') {
+              collideBallCircle(ball, obs.x, obs.y, obs.r, 0.62);
+            } else if (obs.kind === 'bumper') {
+              const hit = collideBallCircle(ball, obs.x, obs.y, obs.r, 0.92, 6);
+              if (hit) { obs.hitTime = now; }
+            } else if (obs.kind === 'ramp') {
+              collideBallSegment(ball, obs.x1, obs.y1, obs.x2, obs.y2);
+            } else if (obs.kind === 'spinner') {
+              const cos = Math.cos(obs.angle), sin = Math.sin(obs.angle);
+              collideBallSegment(ball,
+                obs.cx - cos * obs.len, obs.cy - sin * obs.len,
+                obs.cx + cos * obs.len, obs.cy + sin * obs.len
+              );
             }
-          } else if (obs.kind === 'ramp') {
-            collideBallSegment(ball, obs.x1, obs.y1, obs.x2, obs.y2);
-          } else if (obs.kind === 'spinner') {
-            const cos = Math.cos(obs.angle), sin = Math.sin(obs.angle);
-            collideBallSegment(ball,
-              obs.cx - cos * obs.len, obs.cy - sin * obs.len,
-              obs.cx + cos * obs.len, obs.cy + sin * obs.len
-            );
           }
+        } // end substep
+
+        // Slow-frame 정체 감지 → 랜덤 탈출 점프
+        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        if (speed < 0.6) {
+          ball.slowFrames = (ball.slowFrames || 0) + 1;
+          if (ball.slowFrames > 90) {
+            ball.vx += (Math.random() - 0.5) * 6;
+            ball.vy -= 3 + Math.random() * 4;
+            ball.slowFrames = 0;
+          }
+        } else {
+          ball.slowFrames = 0;
         }
 
         // Goal detection
         if (ball.y + ball.r > CH - 45 && ball.active) {
           ball.active = false;
           const gIdx = goalsRef.current.findIndex(g => ball.x >= g.x && ball.x < g.x + g.w);
-          if (gIdx >= 0) {
+          const slot = gIdx >= 0 ? goalsRef.current[gIdx] : null;
+          if (slot) {
             const updated = goalsRef.current.map((g, i) => i === gIdx ? { ...g, count: g.count + 1 } : g);
             goalsRef.current = updated;
             setGoals([...updated]);
-            if (goalsRef.current[gIdx].pts > 0) {
-              totalScoreRef.current += 1;
-              setTotalScore(totalScoreRef.current);
+            if (slot.pts > 0) { totalScoreRef.current += 1; setTotalScore(totalScoreRef.current); }
+            lastArrivedRef.current = { name: ball.name, color: ball.color, slotLabel: slot.label, isJackpot: slot.pts > 0 };
+          }
+        }
+      }
+
+      // 공끼리 충돌 (O(n²))
+      const activeBalls = ballsRef.current.filter(b => b.active);
+      for (let i = 0; i < activeBalls.length; i++) {
+        for (let j = i + 1; j < activeBalls.length; j++) {
+          const a = activeBalls[i], b = activeBalls[j];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minD = a.r + b.r;
+          if (dist < minD && dist > 0.001) {
+            const nx = dx / dist, ny = dy / dist;
+            const overlap = (minD - dist) / 2;
+            a.x -= nx * overlap; a.y -= ny * overlap;
+            b.x += nx * overlap; b.y += ny * overlap;
+            const relVx = a.vx - b.vx, relVy = a.vy - b.vy;
+            const dot = relVx * nx + relVy * ny;
+            if (dot > 0) {
+              const impulse = dot * 0.85;
+              a.vx -= impulse * nx; a.vy -= impulse * ny;
+              b.vx += impulse * nx; b.vy += impulse * ny;
             }
           }
         }
       }
+
       ballsRef.current = ballsRef.current.filter(b => b.active || b.y < CH + 80);
+
+      // 모든 공 골인 완료 시 마지막 이름 표시
+      if (ballsRef.current.length === 0 && lastArrivedRef.current) {
+        const info = lastArrivedRef.current;
+        lastArrivedRef.current = null;
+        if (lastArrivalTimer.current) clearTimeout(lastArrivalTimer.current);
+        setLastArrival(info);
+        lastArrivalTimer.current = setTimeout(() => setLastArrival(null), 6000);
+      }
     };
 
     // ─── Render ───
@@ -1759,6 +1838,15 @@ const PinballGame: React.FC = () => {
         ctx.shadowBlur = 14;
         ctx.fill();
         ctx.restore();
+        // 공 이름
+        ctx.save();
+        ctx.shadowBlur = 3; ctx.shadowColor = '#000';
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(ball.name.slice(0, 6), ball.x, ball.y - ball.r - 1);
+        ctx.restore();
       }
 
       // ─── Goal slots ───
@@ -1809,19 +1897,43 @@ const PinballGame: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  const addBall = (n = 1) => {
-    for (let i = 0; i < n; i++) {
-      const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
-      const x = 55 + Math.random() * (CW - 110);
-      ballsRef.current.push({ x, y: 15 + Math.random() * 20, vx: (Math.random() - 0.5) * 3, vy: 0, r: BALL_R, color, active: true, trail: [] });
-    }
-    setBallCount(c => c + n);
-    // 투하 시 스크롤 맨 위로
+  const enqueueBall = (name: string) => {
+    if (!name.trim()) return;
+    const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+    const next = [...pendingRef.current, { name: name.trim(), color }];
+    pendingRef.current = next;
+    setPending([...next]);
+    setNewBallName('');
+  };
+
+  const removePending = (idx: number) => {
+    const next = pendingRef.current.filter((_, i) => i !== idx);
+    pendingRef.current = next;
+    setPending([...next]);
+  };
+
+  const launchAll = () => {
+    if (pendingRef.current.length === 0) return;
+    const pb = pendingRef.current;
+    const spacing = Math.min(60, (CW - 40) / pb.length);
+    const totalW = spacing * (pb.length - 1);
+    const startX = (CW - totalW) / 2;
+    pb.forEach((p, i) => {
+      const x = startX + i * spacing;
+      ballsRef.current.push({ x, y: 20, vx: (Math.random() - 0.5) * 3, vy: 0, r: BALL_R, color: p.color, active: true, trail: [], name: p.name, slowFrames: 0 });
+    });
+    setBallCount(c => c + pb.length);
+    pendingRef.current = [];
+    setPending([]);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   };
 
   const resetGame = () => {
     ballsRef.current = [];
+    pendingRef.current = [];
+    setPending([]);
+    lastArrivedRef.current = null;
+    setLastArrival(null);
     const fresh = INIT_GOALS.map(g => ({ ...g }));
     goalsRef.current = fresh;
     setGoals(fresh);
@@ -1837,32 +1949,75 @@ const PinballGame: React.FC = () => {
   });
 
   return (
-    <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start', justifyContent: 'center', padding: '10px 0' }}>
+    <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start', justifyContent: 'center', padding: '10px 0', position: 'relative' }}>
+      {/* 마지막 도착 오버레이 */}
+      {lastArrival && (
+        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 9999, textAlign: 'center', pointerEvents: 'none' }}>
+          <div style={{ background: lastArrival.isJackpot ? 'radial-gradient(circle, #ffd70044, #00000088)' : 'radial-gradient(circle, #33333388, #00000088)', borderRadius: '24px', padding: '36px 56px', border: `2px solid ${lastArrival.isJackpot ? '#ffd700' : '#555'}`, boxShadow: lastArrival.isJackpot ? '0 0 80px #ffd700aa' : '0 0 30px #00000088' }}>
+            {lastArrival.isJackpot && <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎉</div>}
+            <div style={{ color: lastArrival.color, fontSize: '2.4rem', fontWeight: 900, textShadow: `0 0 20px ${lastArrival.color}` }}>{lastArrival.name}</div>
+            <div style={{ color: lastArrival.isJackpot ? '#ffd700' : '#aaa', fontSize: '1.1rem', marginTop: '8px', fontWeight: 700 }}>{lastArrival.slotLabel}</div>
+          </div>
+        </div>
+      )}
+
       {/* Canvas — 스크롤 가능 */}
       <div ref={scrollRef} style={{ height: '720px', overflowY: 'scroll', borderRadius: '12px', border: '2px solid #1a1a3a', boxShadow: '0 0 40px rgba(0,100,255,0.15)', scrollbarWidth: 'thin', scrollbarColor: '#333 #111' }}>
-        <canvas ref={canvasRef} width={CW} height={CH}
-          style={{ display: 'block' }} />
+        <canvas ref={canvasRef} width={CW} height={CH} style={{ display: 'block' }} />
       </div>
 
       {/* Control panel */}
-      <div style={{ width: '200px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {/* Score */}
-        <div style={{ background: '#111', borderRadius: '16px', padding: '20px', textAlign: 'center', border: '1px solid #ffd70033' }}>
-          <div style={{ color: '#888', fontSize: '0.75rem', marginBottom: '6px', fontWeight: 700 }}>💎 JACKPOT</div>
-          <div style={{ color: '#ffd700', fontSize: '2.8rem', fontWeight: 900, textShadow: '0 0 24px #ffd700aa' }}>{totalScore}</div>
-          <div style={{ color: '#555', fontSize: '0.72rem', marginTop: '6px' }}>공 {ballCount}개 발사됨</div>
+        <div style={{ background: '#111', borderRadius: '16px', padding: '18px', textAlign: 'center', border: '1px solid #ffd70033' }}>
+          <div style={{ color: '#888', fontSize: '0.75rem', marginBottom: '4px', fontWeight: 700 }}>💎 JACKPOT</div>
+          <div style={{ color: '#ffd700', fontSize: '2.6rem', fontWeight: 900, textShadow: '0 0 24px #ffd700aa' }}>{totalScore}</div>
+          <div style={{ color: '#555', fontSize: '0.72rem', marginTop: '4px' }}>공 {ballCount}개 발사됨</div>
         </div>
 
-        {/* Buttons */}
-        <button onClick={() => addBall(1)} style={btnStyle('#00ffa3')}>🎱 공 1개 추가</button>
-        <button onClick={() => addBall(5)} style={btnStyle('#4d96ff')}>🎱 공 5개 추가</button>
-        <button onClick={() => addBall(10)} style={btnStyle('#ff922b')}>🎱 공 10개 추가</button>
+        {/* 공 이름 입력 */}
+        <div style={{ background: '#111', borderRadius: '12px', padding: '12px', border: '1px solid #333' }}>
+          <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px' }}>🎱 공 추가</div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <input
+              value={newBallName}
+              onChange={e => setNewBallName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && enqueueBall(newBallName)}
+              placeholder="이름 입력"
+              style={{ flex: 1, background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', padding: '6px 8px', fontSize: '0.8rem', outline: 'none' }}
+            />
+            <button onClick={() => enqueueBall(newBallName)} style={{ background: '#00ffa322', border: '1px solid #00ffa344', color: '#00ffa3', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontWeight: 900 }}>+</button>
+          </div>
+        </div>
+
+        {/* 대기 목록 */}
+        {pending.length > 0 && (
+          <div style={{ background: '#0a0a0a', borderRadius: '12px', padding: '10px', border: '1px solid #222', maxHeight: '180px', overflowY: 'auto' }}>
+            <div style={{ color: '#666', fontSize: '0.72rem', fontWeight: 700, marginBottom: '6px' }}>대기 중 ({pending.length})</div>
+            {pending.map((p, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.color, boxShadow: `0 0 6px ${p.color}` }} />
+                  <span style={{ color: '#ccc', fontSize: '0.78rem' }}>{p.name}</span>
+                </div>
+                <button onClick={() => removePending(i)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.75rem', padding: '0 4px' }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 출발 버튼 */}
+        <button onClick={launchAll} disabled={pending.length === 0}
+          style={{ cursor: pending.length > 0 ? 'pointer' : 'default', width: '100%', padding: '13px', borderRadius: '12px', border: 'none', background: pending.length > 0 ? 'linear-gradient(90deg,#ff6b6b,#ff922b)' : '#222', color: pending.length > 0 ? 'white' : '#444', fontWeight: 900, fontSize: '1rem', transition: 'all 0.2s' }}>
+          🚀 출발하기 {pending.length > 0 ? `(${pending.length}개)` : ''}
+        </button>
+
         <button onClick={resetGame} style={btnStyle('#ff4b4b')}>🔄 초기화</button>
 
         {/* Legend */}
-        <div style={{ background: '#0a0a0a', borderRadius: '12px', padding: '14px', border: '1px solid #1a1a1a', fontSize: '0.75rem' }}>
-          <div style={{ color: '#666', fontWeight: 900, marginBottom: '10px' }}>장애물 종류</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        <div style={{ background: '#0a0a0a', borderRadius: '12px', padding: '12px', border: '1px solid #1a1a1a', fontSize: '0.75rem' }}>
+          <div style={{ color: '#666', fontWeight: 900, marginBottom: '8px' }}>장애물 종류</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ color: '#8090c0' }}>⚪ 핀 — 기본 튕김</div>
             <div style={{ color: '#ff6b6b' }}>🔴 범퍼 — 강한 반발</div>
             <div style={{ color: '#00ffa3' }}>📐 램프 — 방향 유도</div>
@@ -1871,11 +2026,9 @@ const PinballGame: React.FC = () => {
         </div>
 
         {/* Jackpot count */}
-        <div style={{ background: '#ffd70011', borderRadius: '12px', padding: '14px', border: '1px solid #ffd70033', textAlign: 'center' }}>
-          <div style={{ color: '#ffd700', fontSize: '0.75rem', fontWeight: 900, marginBottom: '6px' }}>JACKPOT 횟수</div>
-          <div style={{ color: '#ffd700', fontSize: '1.8rem', fontWeight: 900 }}>
-            {goals.find(g => g.pts > 0)?.count ?? 0}
-          </div>
+        <div style={{ background: '#ffd70011', borderRadius: '12px', padding: '12px', border: '1px solid #ffd70033', textAlign: 'center' }}>
+          <div style={{ color: '#ffd700', fontSize: '0.75rem', fontWeight: 900, marginBottom: '4px' }}>JACKPOT 횟수</div>
+          <div style={{ color: '#ffd700', fontSize: '1.8rem', fontWeight: 900 }}>{goals.find(g => g.pts > 0)?.count ?? 0}</div>
           <div style={{ color: '#555', fontSize: '0.7rem', marginTop: '4px' }}>꽝: {goals.filter(g => g.pts === 0).reduce((s, g) => s + g.count, 0)}회</div>
         </div>
       </div>
@@ -1883,9 +2036,104 @@ const PinballGame: React.FC = () => {
   );
 };
 
+// ─────────────────────────────────────────────
+// 🎥 OBS 오버레이 — 미션보드 (투명 배경)
+// ?overlay=mission 으로 접근
+// ?w=500&h=720 으로 사이즈 조절 (기본 500×720)
+// ─────────────────────────────────────────────
+const MissionBoardOverlay: React.FC = () => {
+  const params = new URLSearchParams(window.location.search);
+  const W = parseInt(params.get('w') || '500', 10);
+  const H = parseInt(params.get('h') || '720', 10);
+
+  const [missions, setMissions] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`${SOCKET_URL}/missions`).then(r => r.json()).then(data => setMissions(data));
+    const handleNew = (m: any) => setMissions(p => [...p, m]);
+    const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
+    const handleDel = (id: string) => setMissions(p => p.filter(m => String(m.id) !== String(id)));
+    socket.on('newMission', handleNew);
+    socket.on('updateMission', handleUpdate);
+    socket.on('missionDeleted', handleDel);
+    return () => {
+      socket.off('newMission', handleNew);
+      socket.off('updateMission', handleUpdate);
+      socket.off('missionDeleted', handleDel);
+    };
+  }, []);
+
+  const mainMissions = missions.filter(m => m.type !== 'rogada');
+  const grouped = new Map<string, any[]>();
+  mainMissions.forEach(m => {
+    const key = (m.content.startsWith('!미션 ') ? m.content.replace('!미션 ', '') : m.content).trim().toLowerCase();
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(m);
+  });
+  const groups = Array.from(grouped.values());
+
+  return (
+    <div style={{ width: `${W}px`, height: `${H}px`, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', boxSizing: 'border-box' }}>
+      {groups.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1rem', fontWeight: 700 }}>미션 없음</span>
+        </div>
+      ) : (
+        <AnimatePresence>
+          {groups.map(group => {
+            const mission = group[0];
+            const count = group.length;
+            const contentFixed = mission.content.startsWith('!미션 ') ? mission.content.replace('!미션 ', '') : mission.content;
+            const isLadder = contentFixed.includes('의리사다리');
+            const isLive = mission.status === 'accepted';
+            return (
+              <motion.div
+                key={mission.id}
+                layout
+                initial={{ x: 30, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -30, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 14px', borderRadius: '10px',
+                  background: 'rgba(8,8,8,0.85)',
+                  border: `2px solid ${isLive ? '#00ffa3' : isLadder ? '#ffbd2e' : '#2a2a2a'}`,
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  boxSizing: 'border-box', width: '100%', flexShrink: 0,
+                  boxShadow: isLive ? '0 0 12px rgba(0,255,163,0.25)' : isLadder ? '0 0 12px rgba(255,189,46,0.2)' : 'none',
+                }}
+              >
+                <div style={{ flexShrink: 0, padding: '3px 8px', borderRadius: '5px', background: isLive ? '#00ffa3' : '#333', color: isLive ? 'black' : '#888', fontSize: '0.6rem', fontWeight: 900 }}>
+                  {isLive ? 'LIVE' : 'WAIT'}
+                </div>
+                {count > 1 && (
+                  <div style={{ flexShrink: 0, background: '#ff4b4b', color: 'white', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900 }}>
+                    {count}
+                  </div>
+                )}
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 900, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isLadder ? '#ffbd2e' : 'white' }}>
+                    {contentFixed}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: isLadder ? '#ffbd2e88' : '#00ffa388', fontWeight: 600 }}>
+                    @{mission.creator}{count > 1 ? ` 외 ${count - 1}명` : ''}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      )}
+    </div>
+  );
+};
+
 // OBS 오버레이 진입점 — 모든 컴포넌트 정의 후 마지막에 위치
 const App: React.FC = () => {
-  const isOverlay = new URLSearchParams(window.location.search).get('overlay') === 'true';
+  const overlayParam = new URLSearchParams(window.location.search).get('overlay');
+  const isOverlay = overlayParam === 'true' || overlayParam === 'mission';
 
   useEffect(() => {
     if (isOverlay) {
@@ -1898,7 +2146,8 @@ const App: React.FC = () => {
     };
   }, [isOverlay]);
 
-  if (isOverlay) return <HamsterOverlay />;
+  if (overlayParam === 'mission') return <MissionBoardOverlay />;
+  if (overlayParam === 'true') return <HamsterOverlay />;
   return <AppMain />;
 };
 
