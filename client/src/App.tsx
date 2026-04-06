@@ -628,37 +628,39 @@ const HamsterOverlay: React.FC = () => {
   const [walkFrame, setWalkFrame] = useState(0);
   const [stageW, setStageW] = useState(window.innerWidth);
   const [cheeseTargets, setCheeseTargets] = useState<Set<string>>(new Set());
-  const [cheeseEnabled, setCheeseEnabled] = useState(false);
   const sinkTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cheeseTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cheeseRandoms = useRef<Map<string, { x: number; rotate: number; size: number; icon: string }>>(new Map());
   const hamstersRef = useRef<Map<string, HamsterData>>(new Map());
+  const cheeseEnabledRef = useRef(false);
   const INACTIVE_MS = 60000;
 
+  const triggerCheeseRef = useRef((_nickname: string) => {});
+  triggerCheeseRef.current = (nickname: string) => {
+    const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
+    cheeseRandoms.current.set(nickname, rnd);
+    if (cheeseTimers.current.has(nickname)) clearTimeout(cheeseTimers.current.get(nickname)!);
+    setCheeseTargets(prev => new Set([...prev, nickname]));
+    cheeseTimers.current.set(nickname, setTimeout(() => {
+      setCheeseTargets(prev => { const s = new Set(prev); s.delete(nickname); return s; });
+    }, 1600));
+    setHamsters(prev => {
+      const h = prev.get(nickname);
+      if (!h) return prev;
+      const next = new Map(prev);
+      next.set(nickname, { ...h, expression: 'happy', happyUntil: Date.now() + 3000 });
+      return next;
+    });
+  };
+
   useEffect(() => {
-    fetch(`${SOCKET_URL}/cheese-enabled`).then(r => r.json()).then(d => setCheeseEnabled(d.enabled));
-    const onCheeseUpdate = (enabled: boolean) => setCheeseEnabled(enabled);
-    const triggerCheese = (nickname: string) => {
-      const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
-      cheeseRandoms.current.set(nickname, rnd);
-      if (cheeseTimers.current.has(nickname)) clearTimeout(cheeseTimers.current.get(nickname)!);
-      setCheeseTargets(prev => new Set([...prev, nickname]));
-      cheeseTimers.current.set(nickname, setTimeout(() => {
-        setCheeseTargets(prev => { const s = new Set(prev); s.delete(nickname); return s; });
-      }, 1600));
-      setHamsters(prev => {
-        const h = prev.get(nickname);
-        if (!h) return prev;
-        const next = new Map(prev);
-        next.set(nickname, { ...h, expression: 'happy', happyUntil: Date.now() + 3000 });
-        return next;
-      });
-    };
+    fetch(`${SOCKET_URL}/cheese-enabled`).then(r => r.json()).then(d => { cheeseEnabledRef.current = d.enabled; });
+    const onCheeseUpdate = (enabled: boolean) => { cheeseEnabledRef.current = enabled; };
     const onCheeseTest = () => {
       const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
       if (active.length === 0) return;
       const target = active[Math.floor(Math.random() * active.length)];
-      triggerCheese(target.nickname);
+      triggerCheeseRef.current(target.nickname);
     };
     socket.on('cheeseEnabledUpdate', onCheeseUpdate);
     socket.on('cheeseTest', onCheeseTest);
@@ -790,11 +792,11 @@ const HamsterOverlay: React.FC = () => {
         }
         return next;
       });
-      if (isDonation && cheeseEnabled) {
+      if (isDonation && cheeseEnabledRef.current) {
         const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
         if (active.length > 0) {
           const target = active[Math.floor(Math.random() * active.length)];
-          triggerCheese(target.nickname);
+          triggerCheeseRef.current(target.nickname);
         }
       }
     };
@@ -940,17 +942,18 @@ const HamsterChatBot: React.FC = () => {
   const [walkFrame, setWalkFrame] = useState(0);
   const [chatLog, setChatLog] = useState<{ sender: string; content: string; isDonation: boolean }[]>([]);
   const [cheeseTargets, setCheeseTargets] = useState<Set<string>>(new Set());
-  const [cheeseEnabled, setCheeseEnabled] = useState(false);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const sinkTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const emergeTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cheeseTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const cheeseRandoms = useRef<Map<string, { x: number; rotate: number; size: number; icon: string }>>(new Map());
   const hamstersRef = useRef<Map<string, HamsterData>>(new Map());
+  const cheeseEnabledRef = useRef(false);
   const STAGE_W = 860;
   const INACTIVE_MS = 60000;
 
-  const triggerCheese = (nickname: string) => {
+  const triggerCheeseRef = useRef((_nickname: string) => {});
+  triggerCheeseRef.current = (nickname: string) => {
     const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
     cheeseRandoms.current.set(nickname, rnd);
     if (cheeseTimers.current.has(nickname)) clearTimeout(cheeseTimers.current.get(nickname)!);
@@ -968,13 +971,13 @@ const HamsterChatBot: React.FC = () => {
   };
 
   useEffect(() => {
-    fetch(`${SOCKET_URL}/cheese-enabled`).then(r => r.json()).then(d => setCheeseEnabled(d.enabled));
-    const onCheeseUpdate = (enabled: boolean) => setCheeseEnabled(enabled);
+    fetch(`${SOCKET_URL}/cheese-enabled`).then(r => r.json()).then(d => { cheeseEnabledRef.current = d.enabled; });
+    const onCheeseUpdate = (enabled: boolean) => { cheeseEnabledRef.current = enabled; };
     const onCheeseTest = () => {
       const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
       if (active.length === 0) return;
       const target = active[Math.floor(Math.random() * active.length)];
-      triggerCheese(target.nickname);
+      triggerCheeseRef.current(target.nickname);
     };
     socket.on('cheeseEnabledUpdate', onCheeseUpdate);
     socket.on('cheeseTest', onCheeseTest);
@@ -1133,11 +1136,11 @@ const HamsterChatBot: React.FC = () => {
         }
         return next;
       });
-      if (isDonation && cheeseEnabled) {
+      if (isDonation && cheeseEnabledRef.current) {
         const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
         if (active.length > 0) {
           const target = active[Math.floor(Math.random() * active.length)];
-          triggerCheese(target.nickname);
+          triggerCheeseRef.current(target.nickname);
         }
       }
     };
