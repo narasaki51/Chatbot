@@ -51,11 +51,13 @@ const AppMain: React.FC = () => {
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
+  const [isCheeseEnabled, setIsCheeseEnabled] = useState(false);
 
   useEffect(() => {
     fetch(`${SOCKET_URL}/missions`).then(res => res.json()).then(data => setMissions(data));
     fetch(`${SOCKET_URL}/donation-only`).then(res => res.json()).then(data => setIsDonationOnly(data.enabled));
     fetch(`${SOCKET_URL}/mission-donation-only`).then(res => res.json()).then(data => setIsMissionDonationOnly(data.enabled));
+    fetch(`${SOCKET_URL}/cheese-enabled`).then(res => res.json()).then(data => setIsCheeseEnabled(data.enabled));
 
     const handleNew = (m: any) => setMissions(p => [...p, m]);
     const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
@@ -65,12 +67,14 @@ const AppMain: React.FC = () => {
     };
     const handleDonationOnlyUpdate = (enabled: boolean) => setIsDonationOnly(enabled);
     const handleMissionDonationOnlyUpdate = (enabled: boolean) => setIsMissionDonationOnly(enabled);
+    const handleCheeseEnabledUpdate = (enabled: boolean) => setIsCheeseEnabled(enabled);
 
     socket.on('newMission', handleNew);
     socket.on('updateMission', handleUpdate);
     socket.on('missionDeleted', handleDel);
     socket.on('donationOnlyUpdate', handleDonationOnlyUpdate);
     socket.on('missionDonationOnlyUpdate', handleMissionDonationOnlyUpdate);
+    socket.on('cheeseEnabledUpdate', handleCheeseEnabledUpdate);
 
     return () => {
       socket.off('newMission', handleNew);
@@ -78,8 +82,18 @@ const AppMain: React.FC = () => {
       socket.off('missionDeleted', handleDel);
       socket.off('donationOnlyUpdate', handleDonationOnlyUpdate);
       socket.off('missionDonationOnlyUpdate', handleMissionDonationOnlyUpdate);
+      socket.off('cheeseEnabledUpdate', handleCheeseEnabledUpdate);
     };
   }, [SOCKET_URL]);
+
+  const toggleCheeseEnabled = () => {
+    const nextVal = !isCheeseEnabled;
+    setIsCheeseEnabled(nextVal);
+    fetch(`${SOCKET_URL}/cheese-enabled`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: nextVal }) });
+  };
+  const testCheese = () => {
+    fetch(`${SOCKET_URL}/test-cheese`, { method: 'POST' });
+  };
 
   const toggleDonationOnly = () => {
     const nextVal = !isDonationOnly;
@@ -172,6 +186,12 @@ const AppMain: React.FC = () => {
             <button onClick={() => addTestMission('의리사다리 벌칙!')} style={{ background: '#222', border: 'none', color: '#00d1ff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 사다리/룰렛 벌칙</button>
             <button onClick={() => addTestDonation('!룰렛추가 10스쿼트')} style={{ background: '#222', border: 'none', color: '#ffbd2e', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 도네(룰렛옵션)</button>
             <button onClick={() => fetch(`${SOCKET_URL}/test-sentiment`, { method: 'POST' })} style={{ background: '#222', border: 'none', color: '#ff4b4b', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 채팅(민심조작)</button>
+            <div style={{ width: '1px', background: '#333', margin: '0 4px' }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: isCheeseEnabled ? '#f5c542' : '#555', fontWeight: 900, cursor: 'pointer' }}>
+              <input type="checkbox" checked={isCheeseEnabled} onChange={toggleCheeseEnabled} style={{ cursor: 'pointer' }} />
+              🧀 치즈
+            </label>
+            <button onClick={testCheese} disabled={!isCheeseEnabled} style={{ background: isCheeseEnabled ? '#2a2000' : '#1a1a1a', border: `1px solid ${isCheeseEnabled ? '#f5c542' : '#333'}`, color: isCheeseEnabled ? '#f5c542' : '#444', cursor: isCheeseEnabled ? 'pointer' : 'not-allowed', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }}>🧀 테스트</button>
           </div>
         )}
       </header>
@@ -571,6 +591,7 @@ interface HamsterData {
   lastMessageTs: number;
   colorIdx: number;
   expression: 'normal' | 'angry' | 'sad' | 'happy' | 'wink';
+  happyUntil: number;
   isDonation: boolean;
   sinking: boolean;
   emerging: boolean;
@@ -606,8 +627,45 @@ const HamsterOverlay: React.FC = () => {
   const [hamsters, setHamsters] = useState<Map<string, HamsterData>>(new Map());
   const [walkFrame, setWalkFrame] = useState(0);
   const [stageW, setStageW] = useState(window.innerWidth);
+  const [cheeseTargets, setCheeseTargets] = useState<Set<string>>(new Set());
+  const [cheeseEnabled, setCheeseEnabled] = useState(false);
   const sinkTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const cheeseTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const cheeseRandoms = useRef<Map<string, { x: number; rotate: number; size: number; icon: string }>>(new Map());
+  const hamstersRef = useRef<Map<string, HamsterData>>(new Map());
   const INACTIVE_MS = 60000;
+
+  useEffect(() => {
+    fetch(`${SOCKET_URL}/cheese-enabled`).then(r => r.json()).then(d => setCheeseEnabled(d.enabled));
+    const onCheeseUpdate = (enabled: boolean) => setCheeseEnabled(enabled);
+    const triggerCheese = (nickname: string) => {
+      const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
+      cheeseRandoms.current.set(nickname, rnd);
+      if (cheeseTimers.current.has(nickname)) clearTimeout(cheeseTimers.current.get(nickname)!);
+      setCheeseTargets(prev => new Set([...prev, nickname]));
+      cheeseTimers.current.set(nickname, setTimeout(() => {
+        setCheeseTargets(prev => { const s = new Set(prev); s.delete(nickname); return s; });
+      }, 1600));
+      setHamsters(prev => {
+        const h = prev.get(nickname);
+        if (!h) return prev;
+        const next = new Map(prev);
+        next.set(nickname, { ...h, expression: 'happy', happyUntil: Date.now() + 3000 });
+        return next;
+      });
+    };
+    const onCheeseTest = () => {
+      const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
+      if (active.length === 0) return;
+      const target = active[Math.floor(Math.random() * active.length)];
+      triggerCheese(target.nickname);
+    };
+    socket.on('cheeseEnabledUpdate', onCheeseUpdate);
+    socket.on('cheeseTest', onCheeseTest);
+    return () => { socket.off('cheeseEnabledUpdate', onCheeseUpdate); socket.off('cheeseTest', onCheeseTest); };
+  }, []);
+
+  useEffect(() => { hamstersRef.current = hamsters; }, [hamsters]);
 
   useEffect(() => {
     const onResize = () => setStageW(window.innerWidth);
@@ -635,9 +693,10 @@ const HamsterOverlay: React.FC = () => {
             const dx = (Math.random() - 0.5) * 220;
             const newX = Math.max(10, Math.min(STAGE_W - 70, h.x + dx));
             const reps = Math.floor(Math.random() * 4) + 1;
-            next.set(key, { ...h, x: newX, direction: dx > 0 ? 'right' : 'left', isWalking: true, walkEndAt: Date.now() + 1700 * reps });
+            const walkExpr = Date.now() < h.happyUntil ? 'happy' : h.expression;
+            next.set(key, { ...h, x: newX, direction: dx > 0 ? 'right' : 'left', isWalking: true, walkEndAt: Date.now() + 1700 * reps, expression: walkExpr });
           } else {
-            const expr = IDLE_EXPRS[Math.floor(Math.random() * IDLE_EXPRS.length)];
+            const expr = Date.now() < h.happyUntil ? 'happy' : IDLE_EXPRS[Math.floor(Math.random() * IDLE_EXPRS.length)];
             next.set(key, { ...h, direction: 'front', isWalking: false, walkEndAt: 0, expression: expr });
           }
         });
@@ -684,7 +743,7 @@ const HamsterOverlay: React.FC = () => {
       // !점프 명령 — 해당 햄스터만 점프 (필터링, 표시 안 함, 없으면 등장 후 점프)
       if (cleaned.startsWith('!점프')) {
         const jumpRaw = cleaned.slice(3).trim();
-        const jumpMsg = jumpRaw.length > 10 ? jumpRaw.slice(0, 10) + '…' : (jumpRaw || '점프!');
+        const jumpMsg = jumpRaw.length > 15 ? jumpRaw.slice(0, 15) + '…' : (jumpRaw || '점프!');
         setHamsters(prev => {
           const next = new Map(prev);
           const h = next.get(sender);
@@ -696,7 +755,7 @@ const HamsterOverlay: React.FC = () => {
             if (sinkTimers.current.has(sender)) { clearTimeout(sinkTimers.current.get(sender)!); sinkTimers.current.delete(sender); }
             const colorIdx = h?.colorIdx ?? (next.size % HAMSTER_COLORS.length);
             const x = 40 + Math.random() * (STAGE_W - 120);
-            next.set(sender, { nickname: sender, x, colorIdx, expression: 'happy', isWalking: false, direction: 'front', walkEndAt: 0, message: jumpMsg, messageTs: now, lastMessageTs: now, sinking: false, isDonation: false, emerging: true, joinedAt: h?.joinedAt ?? now, isJumping: true });
+            next.set(sender, { nickname: sender, x, colorIdx, expression: 'happy', happyUntil: 0, isWalking: false, direction: 'front', walkEndAt: 0, message: jumpMsg, messageTs: now, lastMessageTs: now, sinking: false, isDonation: false, emerging: true, joinedAt: h?.joinedAt ?? now, isJumping: true });
             setTimeout(() => {
               setHamsters(p => { const m = new Map(p); const hh = m.get(sender); if (hh) m.set(sender, { ...hh, emerging: false }); return m; });
             }, 600);
@@ -714,7 +773,7 @@ const HamsterOverlay: React.FC = () => {
         return;
       }
 
-      const truncated = cleaned.length > 10 ? cleaned.slice(0, 10) + '…' : cleaned;
+      const truncated = cleaned.length > 15 ? cleaned.slice(0, 15) + '…' : cleaned;
       setHamsters(prev => {
         const next = new Map(prev);
         const existing = next.get(sender);
@@ -724,23 +783,30 @@ const HamsterOverlay: React.FC = () => {
         } else {
           const colorIdx = next.size % HAMSTER_COLORS.length;
           const x = 40 + Math.random() * (STAGE_W - 120);
-          next.set(sender, { nickname: sender, x, colorIdx, expression: isDonation ? 'happy' : 'normal', isWalking: false, direction: 'front', walkEndAt: 0, message: isDonation ? `💰 ${truncated}` : truncated, messageTs: now, lastMessageTs: now, sinking: false, isDonation, emerging: true, joinedAt: now, isJumping: false });
+          next.set(sender, { nickname: sender, x, colorIdx, expression: isDonation ? 'happy' : 'normal', happyUntil: 0, isWalking: false, direction: 'front', walkEndAt: 0, message: isDonation ? `💰 ${truncated}` : truncated, messageTs: now, lastMessageTs: now, sinking: false, isDonation, emerging: true, joinedAt: now, isJumping: false });
           setTimeout(() => {
             setHamsters(p => { const m = new Map(p); const h = m.get(sender); if (h) m.set(sender, { ...h, emerging: false }); return m; });
           }, 600);
         }
         return next;
       });
+      if (isDonation && cheeseEnabled) {
+        const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
+        if (active.length > 0) {
+          const target = active[Math.floor(Math.random() * active.length)];
+          triggerCheese(target.nickname);
+        }
+      }
     };
     socket.on('mainChatLog', handleChat);
     return () => { socket.off('mainChatLog', handleChat); };
   }, []);
 
   const hamsterList = Array.from(hamsters.values());
-  const activeList  = hamsterList.filter(h => !h.sinking);
-  const kingNickname = activeList.length > 0
-    ? activeList.reduce((a, b) => a.joinedAt < b.joinedAt ? a : b).nickname
-    : null;
+  // const activeList  = hamsterList.filter(h => !h.sinking);
+  // const kingNickname = activeList.length > 0
+  //   ? activeList.reduce((a, b) => a.joinedAt < b.joinedAt ? a : b).nickname
+  //   : null;
 
   return (
     <div style={{
@@ -757,8 +823,8 @@ const HamsterOverlay: React.FC = () => {
         ))}
 
         {/* 일반 햄스터 */}
-        {hamsterList.filter(h => h.nickname !== kingNickname && !h.isDonation).map(h => {
-          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.direction === 'left' ? 'walkL' : h.isWalking && h.direction === 'right' ? 'walkR' : h.expression;
+        {hamsterList.filter(h => /*!h.nickname !== kingNickname &&*/ !h.isDonation).map(h => {
+          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.expression !== 'happy' && h.direction === 'left' ? 'walkL' : h.isWalking && h.expression !== 'happy' && h.direction === 'right' ? 'walkR' : h.expression;
           return (
             <motion.div key={h.nickname}
               initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
@@ -774,10 +840,21 @@ const HamsterOverlay: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+              {/* 치즈 낙하 아이콘 */}
+              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                <motion.div
+                  key={h.nickname + '-cheese'}
+                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                  {r.icon}
+                </motion.div>
+              ); })()}
               <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
                 {h.nickname}
               </div>
-              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
@@ -785,27 +862,40 @@ const HamsterOverlay: React.FC = () => {
         })}
 
         {/* 도네이션 햄스터 */}
-        {hamsterList.filter(h => h.nickname !== kingNickname && h.isDonation).map(h => {
-          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.direction === 'left' ? 'walkL' : h.isWalking && h.direction === 'right' ? 'walkR' : h.expression;
+        {hamsterList.filter(h => /*!h.nickname !== kingNickname &&*/ h.isDonation).map(h => {
+          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.expression !== 'happy' && h.direction === 'left' ? 'walkL' : h.isWalking && h.expression !== 'happy' && h.direction === 'right' ? 'walkR' : h.expression;
           return (
             <motion.div key={h.nickname}
               initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
               animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
               transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2 }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
               style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              {/* 도네이션 말풍선 (주석): background '#2a1800', color '#ffbd2e', border '1.5px solid #ffbd2e', 💰 아이콘 */}
               <AnimatePresence>
                 {h.message && (
                   <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
-                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: '#2a1800', color: '#ffbd2e', border: '1.5px solid #ffbd2e', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
-                    <span style={{ marginRight: '4px' }}>💰</span>{h.message}
-                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '7px solid #ffbd2e' }} />
+                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: 'white', color: '#111', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
+                    {h.message}
+                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '7px solid white' }} />
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div style={{ color: '#ffbd2e', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
-                💰 {h.nickname}
+              {/* 치즈 낙하 아이콘 */}
+              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                <motion.div
+                  key={h.nickname + '-cheese'}
+                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                  {r.icon}
+                </motion.div>
+              ); })()}
+              {/* 도네이션 닉네임 (주석): color '#ffbd2e', 💰 {h.nickname} */}
+              <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
+                {h.nickname}
               </div>
-              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
@@ -813,8 +903,8 @@ const HamsterOverlay: React.FC = () => {
         })}
 
         {/* 왕관 햄스터 */}
-        {hamsterList.filter(h => h.nickname === kingNickname).map(h => {
-          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.direction === 'left' ? 'walkL' : h.isWalking && h.direction === 'right' ? 'walkR' : h.expression;
+        {/*hamsterList.filter(h => h.nickname === kingNickname).map(h => {
+          const spriteRow: SpriteRow = h.sinking ? 'sad' : h.isWalking && h.expression !== 'happy' && h.direction === 'left' ? 'walkL' : h.isWalking && h.expression !== 'happy' && h.direction === 'right' ? 'walkR' : h.expression;
           return (
             <motion.div key={h.nickname}
               initial={{ x: h.x, opacity: 0, y: 40, scale: 0.6 }}
@@ -833,12 +923,12 @@ const HamsterOverlay: React.FC = () => {
               <div style={{ color: '#ffdf00', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
                 ⭐ {h.nickname}
               </div>
-              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
           );
-        })}
+        })*/}
 
       </div>
     </div>
@@ -849,17 +939,55 @@ const HamsterChatBot: React.FC = () => {
   const [hamsters, setHamsters] = useState<Map<string, HamsterData>>(new Map());
   const [walkFrame, setWalkFrame] = useState(0);
   const [chatLog, setChatLog] = useState<{ sender: string; content: string; isDonation: boolean }[]>([]);
+  const [cheeseTargets, setCheeseTargets] = useState<Set<string>>(new Set());
+  const [cheeseEnabled, setCheeseEnabled] = useState(false);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const sinkTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const emergeTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const cheeseTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const cheeseRandoms = useRef<Map<string, { x: number; rotate: number; size: number; icon: string }>>(new Map());
+  const hamstersRef = useRef<Map<string, HamsterData>>(new Map());
   const STAGE_W = 860;
   const INACTIVE_MS = 60000;
+
+  const triggerCheese = (nickname: string) => {
+    const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
+    cheeseRandoms.current.set(nickname, rnd);
+    if (cheeseTimers.current.has(nickname)) clearTimeout(cheeseTimers.current.get(nickname)!);
+    setCheeseTargets(prev => new Set([...prev, nickname]));
+    cheeseTimers.current.set(nickname, setTimeout(() => {
+      setCheeseTargets(prev => { const s = new Set(prev); s.delete(nickname); return s; });
+    }, 1600));
+    setHamsters(prev => {
+      const h = prev.get(nickname);
+      if (!h) return prev;
+      const next = new Map(prev);
+      next.set(nickname, { ...h, expression: 'happy', happyUntil: Date.now() + 3000 });
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    fetch(`${SOCKET_URL}/cheese-enabled`).then(r => r.json()).then(d => setCheeseEnabled(d.enabled));
+    const onCheeseUpdate = (enabled: boolean) => setCheeseEnabled(enabled);
+    const onCheeseTest = () => {
+      const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
+      if (active.length === 0) return;
+      const target = active[Math.floor(Math.random() * active.length)];
+      triggerCheese(target.nickname);
+    };
+    socket.on('cheeseEnabledUpdate', onCheeseUpdate);
+    socket.on('cheeseTest', onCheeseTest);
+    return () => { socket.off('cheeseEnabledUpdate', onCheeseUpdate); socket.off('cheeseTest', onCheeseTest); };
+  }, []);
 
   // 발걸음 프레임 토글
   useEffect(() => {
     const t = setInterval(() => setWalkFrame(f => f === 0 ? 1 : 0), 280);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => { hamstersRef.current = hamsters; }, [hamsters]);
 
   // 랜덤 이동 + 표정 변화
   useEffect(() => {
@@ -873,9 +1001,10 @@ const HamsterChatBot: React.FC = () => {
             const dx = (Math.random() - 0.5) * 220;
             const newX = Math.max(10, Math.min(STAGE_W - 70, h.x + dx));
             const reps = Math.floor(Math.random() * 4) + 1;
-            next.set(key, { ...h, x: newX, direction: dx > 0 ? 'right' : 'left', isWalking: true, walkEndAt: Date.now() + 1700 * reps });
+            const walkExpr = Date.now() < h.happyUntil ? 'happy' : h.expression;
+            next.set(key, { ...h, x: newX, direction: dx > 0 ? 'right' : 'left', isWalking: true, walkEndAt: Date.now() + 1700 * reps, expression: walkExpr });
           } else {
-            const expr = IDLE_EXPRS[Math.floor(Math.random() * IDLE_EXPRS.length)];
+            const expr = Date.now() < h.happyUntil ? 'happy' : IDLE_EXPRS[Math.floor(Math.random() * IDLE_EXPRS.length)];
             next.set(key, { ...h, direction: 'front', isWalking: false, walkEndAt: 0, expression: expr });
           }
         });
@@ -930,7 +1059,7 @@ const HamsterChatBot: React.FC = () => {
       // !점프 명령 — 해당 햄스터만 점프 (채팅 로그 미표시, 없으면 등장 후 점프)
       if (cleaned.startsWith('!점프')) {
         const jumpRaw = cleaned.slice(3).trim();
-        const jumpMsg = jumpRaw.length > 10 ? jumpRaw.slice(0, 10) + '…' : (jumpRaw || '점프!');
+        const jumpMsg = jumpRaw.length > 15 ? jumpRaw.slice(0, 15) + '…' : (jumpRaw || '점프!');
         const bubbleJump = jumpMsg.match(/.{1,5}/g)?.join('\n') ?? jumpMsg;
         setHamsters(prev => {
           const next = new Map(prev);
@@ -946,7 +1075,7 @@ const HamsterChatBot: React.FC = () => {
               direction: 'front', isWalking: false, walkEndAt: 0,
               message: bubbleJump, messageTs: now, lastMessageTs: now,
               colorIdx: (h?.colorIdx ?? next.size) % HAMSTER_COLORS.length,
-              expression: 'happy', isDonation: false,
+              expression: 'happy', happyUntil: 0, isDonation: false,
               sinking: false, emerging: true, joinedAt: h?.joinedAt ?? now,
               isJumping: true,
             });
@@ -968,7 +1097,7 @@ const HamsterChatBot: React.FC = () => {
       }
 
       // 말풍선용 25자 / 로그용 40자 제한
-      const truncated = cleaned.length > 10 ? cleaned.slice(0, 10) + '…' : cleaned;
+      const truncated = cleaned.length > 15 ? cleaned.slice(0, 15) + '…' : cleaned;
       const bubbleText = truncated.match(/.{1,5}/g)?.join('\n') ?? truncated;
       const logText = cleaned.length > 40 ? cleaned.slice(0, 40) + '…' : cleaned;
       setChatLog(p => [...p.slice(-99), { sender, content: logText, isDonation }]);
@@ -983,28 +1112,34 @@ const HamsterChatBot: React.FC = () => {
           }
           next.set(sender, { ...existing, message: bubbleText, messageTs: now, lastMessageTs: now, isDonation, isWalking: false, walkEndAt: 0, direction: 'front', sinking: false, expression: isDonation ? 'wink' : 'normal' });
         } else {
-          const newKey = sender;
-          next.set(newKey, {
+          next.set(sender, {
             nickname: sender, x: Math.random() * (STAGE_W - 80) + 20,
             direction: 'front', isWalking: false, walkEndAt: 0,
             message: bubbleText, messageTs: now, lastMessageTs: now,
             colorIdx: next.size % HAMSTER_COLORS.length,
-            expression: isDonation ? 'wink' : 'normal',
+            expression: isDonation ? 'wink' : 'normal', happyUntil: 0,
             isDonation, sinking: false, emerging: true, joinedAt: now, isJumping: false,
           });
           const et = setTimeout(() => {
             setHamsters(p => {
               const m = new Map(p);
-              const h = m.get(newKey);
-              if (h) m.set(newKey, { ...h, emerging: false });
+              const h = m.get(sender);
+              if (h) m.set(sender, { ...h, emerging: false });
               return m;
             });
-            emergeTimers.current.delete(newKey);
+            emergeTimers.current.delete(sender);
           }, 600);
-          emergeTimers.current.set(newKey, et);
+          emergeTimers.current.set(sender, et);
         }
         return next;
       });
+      if (isDonation && cheeseEnabled) {
+        const active = Array.from(hamstersRef.current.values()).filter(h => !h.sinking);
+        if (active.length > 0) {
+          const target = active[Math.floor(Math.random() * active.length)];
+          triggerCheese(target.nickname);
+        }
+      }
     };
     socket.on('mainChatLog', handle);
     return () => { socket.off('mainChatLog', handle); };
@@ -1015,10 +1150,10 @@ const HamsterChatBot: React.FC = () => {
   }, [chatLog]);
 
   const hamsterList = Array.from(hamsters.values());
-  const activeList = hamsterList.filter(h => !h.sinking);
-  const kingNickname = activeList.length > 0
-    ? activeList.reduce((a, b) => a.joinedAt < b.joinedAt ? a : b).nickname
-    : null;
+  // const activeList = hamsterList.filter(h => !h.sinking);
+  // const kingNickname = activeList.length > 0
+  //   ? activeList.reduce((a, b) => a.joinedAt < b.joinedAt ? a : b).nickname
+  //   : null;
 
   return (
     <div style={{ background: 'transparent', borderRadius: '20px', border: 'none', overflow: 'hidden', padding: '20px' }}>
@@ -1040,12 +1175,12 @@ const HamsterChatBot: React.FC = () => {
         )}
 
         {/* 일반 햄스터 — 도네이션/왕보다 먼저, 잔디보다 먼저 렌더 */}
-        {hamsterList.filter(h => h.nickname !== kingNickname && !h.isDonation).map(h => {
+        {hamsterList.filter(h => /*!h.nickname !== kingNickname &&*/ !h.isDonation).map(h => {
           const spriteRow: SpriteRow = h.sinking
             ? 'sad'
-            : h.isWalking && h.direction === 'left'
+            : h.isWalking && h.expression !== 'happy' && h.direction === 'left'
               ? 'walkL'
-              : h.isWalking && h.direction === 'right'
+              : h.isWalking && h.expression !== 'happy' && h.direction === 'right'
                 ? 'walkR'
                 : h.expression;
           return (
@@ -1066,6 +1201,17 @@ const HamsterChatBot: React.FC = () => {
                 )}
               </AnimatePresence>
 
+              {/* 치즈 낙하 아이콘 */}
+              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                <motion.div
+                  key={h.nickname + '-cheese'}
+                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                  {r.icon}
+                </motion.div>
+              ); })()}
               {/* 닉네임 — 스프라이트 위에 표시 */}
               <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black, 0 1px 2px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px', letterSpacing: '0.02em' }}>
                 {h.nickname}
@@ -1073,8 +1219,8 @@ const HamsterChatBot: React.FC = () => {
 
               {/* 햄스터 스프라이트 */}
               <motion.div
-                animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }}
-                transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+                animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }}
+                transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
@@ -1082,12 +1228,12 @@ const HamsterChatBot: React.FC = () => {
         })}
 
         {/* 도네이션 햄스터 — 일반보다 앞, 왕관보다는 뒤 */}
-        {hamsterList.filter(h => h.isDonation && h.nickname !== kingNickname).map(h => {
+        {hamsterList.filter(h => h.isDonation /*&& h.nickname !== kingNickname*/).map(h => {
           const spriteRow: SpriteRow = h.sinking
             ? 'sad'
-            : h.isWalking && h.direction === 'left'
+            : h.isWalking && h.expression !== 'happy' && h.direction === 'left'
               ? 'walkL'
-              : h.isWalking && h.direction === 'right'
+              : h.isWalking && h.expression !== 'happy' && h.direction === 'right'
                 ? 'walkR'
                 : h.expression;
           return (
@@ -1096,21 +1242,34 @@ const HamsterChatBot: React.FC = () => {
               animate={{ x: h.x, y: h.sinking ? 110 : h.isJumping ? [0, -130, 0, -70, 0] : 0, opacity: h.sinking ? 0 : 1, scale: 1 }}
               transition={{ x: { duration: 1.6, ease: 'easeInOut' }, y: h.isJumping ? { duration: 1.0, times: [0, 0.3, 0.6, 0.8, 1] } : { duration: 1.2, ease: 'easeIn' }, opacity: { duration: 0.4 }, scale: { duration: 0.35, ease: 'backOut' } }}
               style={{ position: 'absolute', bottom: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${DISP_W}px`, transformOrigin: 'bottom center' }}>
+              {/* 도네이션 말풍선 (주석): background '#2a1800', color '#ffbd2e', border '1.5px solid #ffbd2e', 💰 아이콘 */}
               <AnimatePresence>
                 {h.message && (
                   <motion.div initial={{ opacity: 0, y: 6, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.85 }}
-                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: '#2a1800', color: '#ffbd2e', border: '1.5px solid #ffbd2e', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
-                    <span style={{ marginRight: '4px' }}>💰</span>{h.message}
-                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '7px solid #ffbd2e' }} />
+                    style={{ position: 'absolute', bottom: `${DISP_H + 30}px`, background: 'white', color: '#111', padding: '5px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, maxWidth: '220px', whiteSpace: 'pre-line', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', zIndex: 10, lineHeight: 1.4, textAlign: 'center' }}>
+                    {h.message}
+                    <div style={{ position: 'absolute', bottom: '-7px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '7px solid white' }} />
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div style={{ color: '#ffbd2e', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black, 0 1px 2px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px', letterSpacing: '0.02em' }}>
-                💰 {h.nickname}
+              {/* 치즈 낙하 아이콘 */}
+              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                <motion.div
+                  key={h.nickname + '-cheese'}
+                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                  {r.icon}
+                </motion.div>
+              ); })()}
+              {/* 도네이션 닉네임 (주석): color '#ffbd2e', 💰 {h.nickname} */}
+              <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black, 0 1px 2px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px', letterSpacing: '0.02em' }}>
+                {h.nickname}
               </div>
               <motion.div
-                animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }}
-                transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
+                animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }}
+                transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
@@ -1118,7 +1277,7 @@ const HamsterChatBot: React.FC = () => {
         })}
 
         {/* 왕관 햄스터 — 일반 햄스터보다 앞, 잔디보다는 뒤 */}
-        {hamsterList.filter(h => h.nickname === kingNickname).map(h => {
+        {/*hamsterList.filter(h => h.nickname === kingNickname).map(h => {
           const spriteRow: SpriteRow = h.sinking
             ? 'sad'
             : h.isWalking && h.direction === 'left'
@@ -1145,34 +1304,16 @@ const HamsterChatBot: React.FC = () => {
                 ⭐ {h.nickname}
               </div>
               <motion.div
-                animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.88 : 1 }}
+                animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0 }}
                 transition={h.isWalking ? { duration: 0.72, repeat: Infinity } : { duration: 0.2 }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
           );
-        })}
+        })*/}
 
-        {/* 잔디 앞줄 — 굵고 짧은 풀 */}
-        {Array.from({ length: 28 }, (_, i) => {
-          const x = (i * 37 + 3) % 100;
-          const h = 10 + (i % 5) * 4;
-          const tilt = (i % 5 - 2) * 9;
-          const color = ['#3d6b1a','#4a7a20','#56882a','#3a6018'][i % 4];
-          return <div key={`f${i}`} style={{ position: 'absolute', bottom: '96px', left: `${x}%`, width: '5px', height: `${h}px`, background: color, borderRadius: '3px 3px 1px 1px', transform: `rotate(${tilt}deg)`, transformOrigin: 'bottom center' }} />;
-        })}
-        {/* 잔디 뒷줄 — 가늘고 긴 풀 */}
-        {Array.from({ length: 22 }, (_, i) => {
-          const x = (i * 47 + 18) % 100;
-          const h = 14 + (i % 4) * 5;
-          const tilt = (i % 5 - 2) * 14;
-          const color = ['#2d5010','#345a14','#3a6618'][i % 3];
-          return <div key={`b${i}`} style={{ position: 'absolute', bottom: '96px', left: `${x}%`, width: '3px', height: `${h}px`, background: color, borderRadius: '2px 2px 0 0', transform: `rotate(${tilt}deg)`, transformOrigin: 'bottom center' }} />;
-        })}
-        {/* 바닥 흙 — 부드러운 언덕 느낌 */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(180deg, #2a4a10 0%, #1a3008 40%, #0e1a06 100%)' }} />
-        {/* 바닥 상단 경계선 — 자연스러운 곡선 느낌 */}
-        <div style={{ position: 'absolute', bottom: '96px', left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, #3d6b1a 0%, #4a7a20 20%, #3a6018 40%, #56882a 60%, #4a7a20 80%, #3d6b1a 100%)', borderRadius: '3px 3px 0 0' }} />
+        {/* 바닥 */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%)' }} />
       </div>
 
       {/* 채팅 로그 */}

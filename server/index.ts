@@ -258,7 +258,7 @@ const connectMainChat = async () => {
 
     chat.on('donation', (donation) => {
       const sender = donation.profile?.nickname || '익명후원자';
-      const content = donation.message;
+      const content = donation.message || '';
       console.log(`💰 [Donation] ${sender}: ${content}`);
       if (content) io.emit('mainChatLog', { sender, content, isDonation: true, timestamp: Date.now() });
       processMessage(sender, content, true);
@@ -416,6 +416,20 @@ app.post('/disconnect-member', (req, res) => {
 });
 
 // 도네이션 전용 모드 관리 API
+let isCheeseEnabled = false;
+app.get('/cheese-enabled', (req, res) => res.json({ enabled: isCheeseEnabled }));
+app.post('/cheese-enabled', (req, res) => {
+  const { enabled } = req.body;
+  isCheeseEnabled = !!enabled;
+  io.emit('cheeseEnabledUpdate', isCheeseEnabled);
+  console.log(`⚙️ [Config Change] Cheese Animation: ${isCheeseEnabled}`);
+  res.json({ success: true, enabled: isCheeseEnabled });
+});
+app.post('/test-cheese', (req, res) => {
+  io.emit('cheeseTest');
+  res.json({ success: true });
+});
+
 app.get('/donation-only', (req, res) => res.json({ enabled: isDonationOnly }));
 app.post('/donation-only', (req, res) => {
   const { enabled } = req.body;
