@@ -52,12 +52,14 @@ const AppMain: React.FC = () => {
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
   const [isCheeseEnabled, setIsCheeseEnabled] = useState(false);
+  const [isAutoAccept, setIsAutoAccept] = useState(false);
 
   useEffect(() => {
     fetch(`${SOCKET_URL}/missions`).then(res => res.json()).then(data => setMissions(data));
     fetch(`${SOCKET_URL}/donation-only`).then(res => res.json()).then(data => setIsDonationOnly(data.enabled));
     fetch(`${SOCKET_URL}/mission-donation-only`).then(res => res.json()).then(data => setIsMissionDonationOnly(data.enabled));
     fetch(`${SOCKET_URL}/cheese-enabled`).then(res => res.json()).then(data => setIsCheeseEnabled(data.enabled));
+    fetch(`${SOCKET_URL}/auto-accept`).then(res => res.json()).then(data => setIsAutoAccept(data.enabled));
 
     const handleNew = (m: any) => setMissions(p => [...p, m]);
     const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
@@ -68,6 +70,7 @@ const AppMain: React.FC = () => {
     const handleDonationOnlyUpdate = (enabled: boolean) => setIsDonationOnly(enabled);
     const handleMissionDonationOnlyUpdate = (enabled: boolean) => setIsMissionDonationOnly(enabled);
     const handleCheeseEnabledUpdate = (enabled: boolean) => setIsCheeseEnabled(enabled);
+    const handleAutoAcceptUpdate = (enabled: boolean) => setIsAutoAccept(enabled);
 
     socket.on('newMission', handleNew);
     socket.on('updateMission', handleUpdate);
@@ -75,6 +78,7 @@ const AppMain: React.FC = () => {
     socket.on('donationOnlyUpdate', handleDonationOnlyUpdate);
     socket.on('missionDonationOnlyUpdate', handleMissionDonationOnlyUpdate);
     socket.on('cheeseEnabledUpdate', handleCheeseEnabledUpdate);
+    socket.on('autoAcceptUpdate', handleAutoAcceptUpdate);
 
     return () => {
       socket.off('newMission', handleNew);
@@ -83,6 +87,7 @@ const AppMain: React.FC = () => {
       socket.off('donationOnlyUpdate', handleDonationOnlyUpdate);
       socket.off('missionDonationOnlyUpdate', handleMissionDonationOnlyUpdate);
       socket.off('cheeseEnabledUpdate', handleCheeseEnabledUpdate);
+      socket.off('autoAcceptUpdate', handleAutoAcceptUpdate);
     };
   }, [SOCKET_URL]);
 
@@ -106,11 +111,17 @@ const AppMain: React.FC = () => {
 
   const toggleMissionDonationOnly = () => {
     const nextVal = !isMissionDonationOnly;
+    setIsMissionDonationOnly(nextVal);
     fetch(`${SOCKET_URL}/mission-donation-only`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled: nextVal })
     });
+  };
+  const toggleAutoAccept = () => {
+    const nextVal = !isAutoAccept;
+    setIsAutoAccept(nextVal);
+    fetch(`${SOCKET_URL}/auto-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: nextVal }) });
   };
 
   const addTestMission = (content: string) => {
@@ -200,7 +211,24 @@ const AppMain: React.FC = () => {
         {view === 'dashboard' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {(user.role === 'admin' || user.role === 'host') && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', gap: '10px' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: isAutoAccept ? '#00ffa322' : '#222',
+                  padding: '10px 20px',
+                  borderRadius: '15px',
+                  border: `1px solid ${isAutoAccept ? '#00ffa3' : '#333'}`,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 900,
+                  color: isAutoAccept ? '#00ffa3' : '#888',
+                  transition: 'all 0.2s'
+                }}>
+                  <input type="checkbox" checked={isAutoAccept} onChange={toggleAutoAccept} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
+                  {isAutoAccept ? '⚡️ 미션 자동 수락 모드 ON' : '⏸️ 미션 수동 수락 모드'}
+                </label>
                 <label style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -739,7 +767,7 @@ const HamsterOverlay: React.FC = () => {
     const handleChat = (data: { sender: string; content: string; isDonation: boolean }) => {
       const { sender, content, isDonation } = data;
       const cleaned = content.replace(/^!(도네이션|donation)\s*/i, '').trim();
-      if (!cleaned) return;
+      if (!cleaned && !isDonation) return;
       const now = Date.now();
 
       // !점프 명령 — 해당 햄스터만 점프 (필터링, 표시 안 함, 없으면 등장 후 점프)
@@ -801,7 +829,9 @@ const HamsterOverlay: React.FC = () => {
       }
     };
     socket.on('mainChatLog', handleChat);
-    return () => { socket.off('mainChatLog', handleChat); };
+    return () => {
+      socket.off('mainChatLog', handleChat);
+    };
   }, []);
 
   const hamsterList = Array.from(hamsters.values());
@@ -1056,7 +1086,7 @@ const HamsterChatBot: React.FC = () => {
     const handle = ({ sender, content, isDonation }: { sender: string; content: string; isDonation: boolean }) => {
       // {} 이모티콘 제거 후 텍스트만 남기고, 빈 메시지는 무시
       const cleaned = content.replace(/\{[^}]*\}/g, '').trim();
-      if (!cleaned) return;
+      if (!cleaned && !isDonation) return;
       const now = Date.now();
 
       // !점프 명령 — 해당 햄스터만 점프 (채팅 로그 미표시, 없으면 등장 후 점프)
@@ -1145,7 +1175,9 @@ const HamsterChatBot: React.FC = () => {
       }
     };
     socket.on('mainChatLog', handle);
-    return () => { socket.off('mainChatLog', handle); };
+    return () => {
+      socket.off('mainChatLog', handle);
+    };
   }, []);
 
   useEffect(() => {

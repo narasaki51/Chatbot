@@ -38,6 +38,8 @@ const client = new ChzzkClient();
 let isDonationOnly = true;
 // 메인 미션 등록을 후원자에게만 허용할지 여부
 let isMissionDonationOnly = false;
+// 미션 자동 수락 여부
+let isAutoAccept = false;
 
 // 민심판독기 상태 (기본 50%)
 let posMatchCount = 0;
@@ -94,7 +96,7 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
         id: Date.now().toString(),
         creator: sender,
         content: missionContent,
-        status: 'pending',
+        status: isAutoAccept ? 'accepted' : 'pending',
         timestamp: new Date().toISOString(),
         type: 'main'
       };
@@ -103,7 +105,7 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
         creator: sender,
         target: '찌모',
         content: missionContent,
-        status: 'pending',
+        status: isAutoAccept ? 'accepted' : 'pending',
         timestamp: new Date().toISOString(),
         type: 'rogada'
       };
@@ -127,7 +129,7 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
         creator: sender,
         target: member,
         content: missionContent,
-        status: 'pending',
+        status: isAutoAccept ? 'accepted' : 'pending',
         timestamp: new Date().toISOString(),
         type: 'rogada'
       };
@@ -148,7 +150,7 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
       creator: sender,
       target: '찌모',
       content: missionContent,
-      status: 'pending',
+      status: isAutoAccept ? 'accepted' : 'pending',
       timestamp: new Date().toISOString(),
       type: 'rogada',
       private: true
@@ -186,7 +188,7 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
       creator: sender,
       target: member,
       content: missionContent,
-      status: 'pending',
+      status: isAutoAccept ? 'accepted' : 'pending',
       timestamp: new Date().toISOString(),
       type: 'rogada'
     };
@@ -205,7 +207,7 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
       creator: sender,
       target: member,
       content: missionContent,
-      status: 'pending',
+      status: isAutoAccept ? 'accepted' : 'pending',
       timestamp: new Date().toISOString(),
       type: 'rogada',
       private: true
@@ -260,7 +262,7 @@ const connectMainChat = async () => {
       const sender = donation.profile?.nickname || '익명후원자';
       const content = donation.message || '';
       console.log(`💰 [Donation] ${sender}: ${content}`);
-      if (content) io.emit('mainChatLog', { sender, content, isDonation: true, timestamp: Date.now() });
+      io.emit('mainChatLog', { sender, content, isDonation: true, timestamp: Date.now() });
       processMessage(sender, content, true);
     });
 
@@ -332,7 +334,10 @@ app.post('/missions', (req, res) => {
 
 app.post('/test-donation', (req, res) => {
   const { creator, content } = req.body;
-  processMessage(creator || '도네테스터', content, true);
+  const sender = creator || '도네테스터';
+  const msg = content || '';
+  io.emit('mainChatLog', { sender, content: msg, isDonation: true, timestamp: Date.now() });
+  processMessage(sender, msg, true);
   res.json({ success: true });
 });
 
@@ -446,6 +451,15 @@ app.post('/mission-donation-only', (req, res) => {
   io.emit('missionDonationOnlyUpdate', isMissionDonationOnly);
   console.log(`⚙️ [Config Change] Mission Donation Only Mode: ${isMissionDonationOnly}`);
   res.json({ success: true, enabled: isMissionDonationOnly });
+});
+
+app.get('/auto-accept', (req, res) => res.json({ enabled: isAutoAccept }));
+app.post('/auto-accept', (req, res) => {
+  const { enabled } = req.body;
+  isAutoAccept = !!enabled;
+  io.emit('autoAcceptUpdate', isAutoAccept);
+  console.log(`⚙️ [Config Change] Mission Auto Accept: ${isAutoAccept}`);
+  res.json({ success: true, enabled: isAutoAccept });
 });
 
 const PORT = process.env.PORT || 4000;
