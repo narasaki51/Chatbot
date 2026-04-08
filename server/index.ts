@@ -325,7 +325,7 @@ app.get('/connected-members', (req, res) => res.json(Array.from(memberChats.keys
 
 app.post('/missions', (req, res) => {
   const missions = getMissions();
-  const m = { ...req.body, id: Date.now().toString(), status: 'pending', timestamp: new Date().toISOString() };
+  const m = { ...req.body, id: Date.now().toString(), status: isAutoAccept ? 'accepted' : 'pending', timestamp: new Date().toISOString() };
   missions.push(m);
   saveMissions(missions);
   io.emit('newMission', m);

@@ -267,7 +267,7 @@ const AppMain: React.FC = () => {
         ) : view === 'ladder' ? (
           <LadderGame key="lad-comp-last" />
         ) : view === 'group' ? (
-          <GroupMissionBoard key="grp-board-last" missions={missions} onUpdate={updateStatus} onDelete={deleteMission} user={user!} />
+          <GroupMissionBoard key="grp-board-last" missions={missions} onUpdate={updateStatus} onDelete={deleteMission} user={user!} isAutoAccept={isAutoAccept} onToggleAutoAccept={toggleAutoAccept} isMissionDonationOnly={isMissionDonationOnly} onToggleMissionDonationOnly={toggleMissionDonationOnly} />
         ) : view === 'sentiment' ? (
           <SentimentTracker key="senti-comp-last" />
         ) : view === 'chatbot' ? (
@@ -333,6 +333,16 @@ const SentimentTracker: React.FC = () => {
   );
 };
 
+const highlightMissionText = (text: string, baseColor: string) => {
+  const regex = /(\d+[\d,.]*(?:만골|원|치즈))/g;
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    regex.test(part)
+      ? <span key={i} style={{ color: '#ffbd2e', fontWeight: 900, textShadow: '0 0 8px rgba(255,189,46,0.6)' }}>{part}</span>
+      : <span key={i} style={{ color: baseColor }}>{part}</span>
+  );
+};
+
 const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, onGoLadder: () => void, isBlind?: boolean, canUseLadder?: boolean }> = ({ mission, count = 1, onUpdate, onDelete, onGoLadder, isBlind = false, canUseLadder = true }) => {
   const [effect, setEffect] = useState<string | null>(null);
   const triggerAction = (status: string) => {
@@ -384,7 +394,7 @@ const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: strin
 
         {/* 미션 내용 입력 현시 (primary) + 생성자 (secondary) */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-          <span style={{ fontWeight: 900, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isLadder ? '#ffbd2e' : 'white' }}>{contentFixed}</span>
+          <span style={{ fontWeight: 900, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{highlightMissionText(contentFixed, isLadder ? '#ffbd2e' : 'white')}</span>
           <span style={{ fontSize: '0.72rem', color: isLadder ? '#ffbd2e88' : '#00ffa388', fontWeight: 600 }}>@{mission.creator}{count > 1 ? ` 외 ${count - 1}명` : ''}</span>
         </div>
       </div>
@@ -435,7 +445,7 @@ const LadderGame: React.FC = () => {
   );
 };
 
-const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, user: UserAuth }> = ({ missions, onUpdate, onDelete, user }) => {
+const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, user: UserAuth, isAutoAccept: boolean, onToggleAutoAccept: () => void, isMissionDonationOnly: boolean, onToggleMissionDonationOnly: () => void }> = ({ missions, onUpdate, onDelete, user, isAutoAccept, onToggleAutoAccept, isMissionDonationOnly, onToggleMissionDonationOnly }) => {
   const rogadaMissions = missions.filter(m => m.type === 'rogada');
   const members = ['찌모', '미랑', '갱쥰', '서씨', '떠기', '말구⭐️'];
 
@@ -505,6 +515,32 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
 
   return (
     <>
+      {(user.role === 'admin' || user.name === '찌모') && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '10px' }}>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            background: isAutoAccept ? '#00ffa322' : '#222',
+            padding: '10px 20px', borderRadius: '15px',
+            border: `1px solid ${isAutoAccept ? '#00ffa3' : '#333'}`,
+            cursor: 'pointer', fontSize: '0.9rem', fontWeight: 900,
+            color: isAutoAccept ? '#00ffa3' : '#888', transition: 'all 0.2s'
+          }}>
+            <input type="checkbox" checked={isAutoAccept} onChange={onToggleAutoAccept} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
+            {isAutoAccept ? '⚡️ 미션 자동 수락 모드 ON' : '⏸️ 미션 수동 수락 모드'}
+          </label>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            background: isMissionDonationOnly ? '#ffbd2e22' : '#222',
+            padding: '10px 20px', borderRadius: '15px',
+            border: `1px solid ${isMissionDonationOnly ? '#ffbd2e' : '#333'}`,
+            cursor: 'pointer', fontSize: '0.9rem', fontWeight: 900,
+            color: isMissionDonationOnly ? '#ffbd2e' : '#888', transition: 'all 0.2s'
+          }}>
+            <input type="checkbox" checked={isMissionDonationOnly} onChange={onToggleMissionDonationOnly} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
+            {isMissionDonationOnly ? '💰 도네이션 미션만 수신 중' : '💬 모든 채팅 미션 수신 중'}
+          </label>
+        </div>
+      )}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', gap: '25px' }}>
         {members.map(member => {
           const cleanName = member.replace('⭐️', '');
@@ -537,7 +573,7 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
                       <button onClick={() => connectMemberChannel(member)} style={{ cursor: 'pointer', background: '#ffbd2e22', color: '#ffbd2e', border: '1px solid #ffbd2e', padding: '8px 14px', borderRadius: '10px', fontWeight: 900, fontSize: '0.85rem' }}>+ 연결</button>
                     )
                   )}
-                  {(user.role === 'admin' || user.role === 'host' || user.name === cleanName) && (
+                  {user.role === 'admin' && (
                     <button onClick={() => addRogadaTest(member)} style={{ cursor: 'pointer', background: '#2e96ff22', color: '#2e96ff', border: '1px solid #2e96ff', padding: '8px 14px', borderRadius: '10px', fontWeight: 900, fontSize: '0.85rem' }}>+ 추가</button>
                   )}
                 </div>
@@ -2306,10 +2342,93 @@ const MissionBoardOverlay: React.FC = () => {
   );
 };
 
+// ?overlay=rogada&member=찌모 으로 접근
+// ?w=500&h=720 으로 사이즈 조절 (기본 500×720)
+// ─────────────────────────────────────────────
+const RogadaBoardOverlay: React.FC = () => {
+  const params = new URLSearchParams(window.location.search);
+  const W = parseInt(params.get('w') || '500', 10);
+  const H = parseInt(params.get('h') || '720', 10);
+  const memberParam = params.get('member') || '';
+
+  const [missions, setMissions] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`${SOCKET_URL}/missions`).then(r => r.json()).then(data => setMissions(data));
+    const handleNew = (m: any) => setMissions(p => [...p, m]);
+    const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
+    const handleDel = (id: string) => setMissions(p => p.filter(m => String(m.id) !== String(id)));
+    socket.on('newMission', handleNew);
+    socket.on('updateMission', handleUpdate);
+    socket.on('missionDeleted', handleDel);
+    return () => {
+      socket.off('newMission', handleNew);
+      socket.off('updateMission', handleUpdate);
+      socket.off('missionDeleted', handleDel);
+    };
+  }, []);
+
+  const memberMissions = missions.filter(m => m.type === 'rogada' && m.target === memberParam && m.status !== 'completed');
+
+  return (
+    <div style={{ width: `${W}px`, height: `${H}px`, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', boxSizing: 'border-box' }}>
+      {memberMissions.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1rem', fontWeight: 700 }}>미션 없음</span>
+        </div>
+      ) : (
+        <AnimatePresence>
+          {memberMissions.map(mission => {
+            const isLive = mission.status === 'accepted';
+            const isPrivate = !!mission.private;
+            return (
+              <motion.div
+                key={mission.id}
+                layout
+                initial={{ x: 30, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -30, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 14px', borderRadius: '10px',
+                  background: 'rgba(8,8,8,0.85)',
+                  border: `2px solid ${isLive ? '#00ffa3' : '#2a2a2a'}`,
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  boxSizing: 'border-box', width: '100%', flexShrink: 0,
+                  boxShadow: isLive ? '0 0 12px rgba(0,255,163,0.25)' : 'none',
+                }}
+              >
+                <div style={{ flexShrink: 0, padding: '3px 8px', borderRadius: '5px', background: isLive ? '#00ffa3' : '#333', color: isLive ? 'black' : '#888', fontSize: '0.6rem', fontWeight: 900 }}>
+                  {isLive ? 'LIVE' : 'WAIT'}
+                </div>
+                {isPrivate && (
+                  <div style={{ flexShrink: 0, padding: '3px 7px', borderRadius: '5px', background: '#2a1a3a', color: '#bb88ff', fontSize: '0.6rem', fontWeight: 900 }}>
+                    🔒 비공개
+                  </div>
+                )}
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 900, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>
+                    {mission.content}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: '#00ffa388', fontWeight: 600 }}>
+                    @{mission.creator}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      )}
+    </div>
+  );
+};
+
 // OBS 오버레이 진입점 — 모든 컴포넌트 정의 후 마지막에 위치
 const App: React.FC = () => {
   const overlayParam = new URLSearchParams(window.location.search).get('overlay');
-  const isOverlay = overlayParam === 'true' || overlayParam === 'mission';
+  const isOverlay = overlayParam === 'true' || overlayParam === 'mission' || overlayParam === 'rogada';
 
   useEffect(() => {
     if (isOverlay) {
@@ -2322,6 +2441,7 @@ const App: React.FC = () => {
     };
   }, [isOverlay]);
 
+  if (overlayParam === 'rogada') return <RogadaBoardOverlay />;
   if (overlayParam === 'mission') return <MissionBoardOverlay />;
   if (overlayParam === 'true') return <HamsterOverlay />;
   return <AppMain />;
