@@ -341,6 +341,15 @@ app.post('/test-donation', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/test-chat', (req, res) => {
+  const { creator, content } = req.body;
+  const sender = creator || '채팅테스터';
+  const msg = content || '';
+  io.emit('mainChatLog', { sender, content: msg, isDonation: false, timestamp: Date.now() });
+  processMessage(sender, msg, false);
+  res.json({ success: true });
+});
+
 app.patch('/missions/:id', (req, res) => {
   let missions = getMissions();
   const m = missions.find((o: any) => o.id === req.params.id);

@@ -46,7 +46,13 @@ const LoginPage: React.FC<{ onSuccess: (user: UserAuth) => void }> = ({ onSucces
 };
 
 const AppMain: React.FC = () => {
-  const [user, setUser] = useState<UserAuth | null>(null);
+  const [user, setUser] = useState<UserAuth | null>(() => {
+    try {
+      const saved = localStorage.getItem('userSession');
+      if (saved) return JSON.parse(saved) as UserAuth;
+    } catch {}
+    return null;
+  });
   const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball'>('dashboard');
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
@@ -142,6 +148,15 @@ const AppMain: React.FC = () => {
     }).catch(err => console.error("Test donation error:", err));
   };
 
+  const testChat = (content: string) => {
+    console.log("[Test] Simulating Chat Message:", content);
+    fetch(`${SOCKET_URL}/test-chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ creator: '채팅테스터', content })
+    }).catch(err => console.error("Test chat error:", err));
+  };
+
   const updateStatus = (id: string, status: string) => {
     fetch(`${SOCKET_URL}/missions/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
   };
@@ -153,11 +168,11 @@ const AppMain: React.FC = () => {
   };
 
   if (!user) {
-    return <LoginPage onSuccess={setUser} />;
+    return <LoginPage onSuccess={(u) => { localStorage.setItem('userSession', JSON.stringify(u)); setUser(u); }} />;
   }
 
-  // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정
-  if (user.role === 'member' && view !== 'group') {
+  // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정 (사다리/룰렛은 허용)
+  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette') {
     setView('group');
   }
   // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정
@@ -173,6 +188,14 @@ const AppMain: React.FC = () => {
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#00ffa3', letterSpacing: '-1px' }}>찌모의 놀이터 <span style={{ fontSize: '0.8rem', color: '#888' }}>({user.name})</span></h1>
         </div>
 
+        {user.role === 'member' && (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
+            <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
+            <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+          </div>
+        )}
+
         {user.role !== 'member' && user.role !== 'guest' && (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => setView('dashboard')} style={{ background: view === 'dashboard' ? '#222' : 'transparent', color: view === 'dashboard' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'dashboard' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>메인대시보드</button>
@@ -186,6 +209,8 @@ const AppMain: React.FC = () => {
           </div>
         )}
 
+        <button onClick={() => { localStorage.removeItem('userSession'); setUser(null); }} style={{ background: 'transparent', border: '1px solid #444', color: '#888', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>로그아웃</button>
+
         {user.role === 'admin' && (
           <div style={{ display: 'flex', gap: '8px', background: '#111', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: '#666', display: 'flex', alignItems: 'center' }}>[Test Panel]</span>
@@ -193,9 +218,30 @@ const AppMain: React.FC = () => {
               <input type="checkbox" checked={isDonationOnly} onChange={toggleDonationOnly} style={{ cursor: 'pointer' }} />
               도네 전용
             </label>
-            <button onClick={() => addTestMission('테스트 미션입니다')} style={{ background: '#222', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 미션 추가</button>
-            <button onClick={() => addTestMission('의리사다리 벌칙!')} style={{ background: '#222', border: 'none', color: '#00d1ff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 사다리/룰렛 벌칙</button>
-            <button onClick={() => addTestDonation('!룰렛추가 10스쿼트')} style={{ background: '#222', border: 'none', color: '#ffbd2e', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 도네(룰렛옵션)</button>
+            <button onClick={() => {
+              if (user.role === 'admin') {
+                const val = prompt('테스트할 채팅 내용을 입력하세요 (예: !미션 물마시기)');
+                if (val) testChat(val);
+              } else {
+                addTestMission('테스트 미션입니다');
+              }
+            }} style={{ background: '#222', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 미션 추가</button>
+            <button onClick={() => {
+              if (user.role === 'admin') {
+                const val = prompt('테스트할 사다리/룰렛 벌칙 채팅을 입력하세요 (예: !미션 의리사다리 벌칙!)');
+                if (val) testChat(val);
+              } else {
+                addTestMission('의리사다리 벌칙!');
+              }
+            }} style={{ background: '#222', border: 'none', color: '#00d1ff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 사다리/룰렛 벌칙</button>
+            <button onClick={() => {
+              if (user.role === 'admin') {
+                const val = prompt('테스트할 후원 채팅을 입력하세요 (예: !룰렛추가 초코우유)');
+                if (val) addTestDonation(val);
+              } else {
+                addTestDonation('!룰렛추가 10스쿼트');
+              }
+            }} style={{ background: '#222', border: 'none', color: '#ffbd2e', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 도네(룰렛옵션)</button>
             <button onClick={() => fetch(`${SOCKET_URL}/test-sentiment`, { method: 'POST' })} style={{ background: '#222', border: 'none', color: '#ff4b4b', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 채팅(민심조작)</button>
             <div style={{ width: '1px', background: '#333', margin: '0 4px' }} />
             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: isCheeseEnabled ? '#f5c542' : '#555', fontWeight: 900, cursor: 'pointer' }}>
@@ -334,7 +380,7 @@ const SentimentTracker: React.FC = () => {
 };
 
 const highlightMissionText = (text: string, baseColor: string) => {
-  const regex = /(\d+[\d,.]*(?:만골|원|치즈))/g;
+  const regex = /((?:\d+[\d,.]*|[일이삼사오육칠팔구십백천만억조]+)\s*[만억조]?\s*(?:만골|골드|원|치즈))/g;
   const parts = text.split(regex);
   return parts.map((part, i) =>
     regex.test(part)
@@ -478,10 +524,22 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
   }, []);
 
   const addRogadaTest = (member: string) => {
+    const cleanName = member.replace('⭐️', '');
+    if (user.role === 'admin') {
+      const val = prompt(`[${cleanName}] 테스트할 채팅 내용을 입력하세요 (예: !${cleanName} 사과 10개 먹기)`);
+      if (val) {
+        fetch(`${IS_DEV ? 'http://localhost:4000' : ''}/test-chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creator: '보드매니저', content: val })
+        });
+        return;
+      }
+    }
     fetch(`${IS_DEV ? 'http://localhost:4000' : ''}/missions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creator: '보드매니저', target: member.replace('⭐️', ''), content: '할당된 작업', type: 'rogada' })
+      body: JSON.stringify({ creator: '보드매니저', target: cleanName, content: '할당된 작업', type: 'rogada' })
     });
   };
 
