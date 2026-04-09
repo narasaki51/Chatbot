@@ -452,39 +452,112 @@ const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: strin
   );
 };
 
+const AllResultsModal: React.FC<{ results: { name: string, result: string, color: string }[], totalAmount: string, onClose: () => void }> = ({ results, totalAmount, onClose }) => {
+  const sorted = [...results].sort((a, b) => Number(a.result) - Number(b.result));
+  const total = Number(totalAmount) || 0;
+  const [payments, setPayments] = useState<string[]>(sorted.map(() => ''));
+  const paid = payments.reduce((s, v) => s + (Number(v) || 0), 0);
+  const remaining = total - paid;
+  const setPayment = (i: number, val: string) => {
+    const num = Number(val) || 0;
+    const otherPaid = payments.reduce((s, v, idx) => idx === i ? s : s + (Number(v) || 0), 0);
+    if (num > 0 && otherPaid + num > total) return;
+    const n = [...payments]; n[i] = val; setPayments(n);
+  };
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '30px 40px', borderRadius: '30px', border: '4px solid #00ffa3', textAlign: 'center', boxShadow: '0 0 50px rgba(0,255,163,0.3)', minWidth: '340px', maxWidth: '90vw' }}>
+        <PartyPopper size={40} color="#00ffa3" style={{ marginBottom: '12px' }} />
+        <div style={{ fontSize: '1.2rem', color: '#00ffa3', fontWeight: 900, marginBottom: '8px' }}>⚡ 동시 진행 결과</div>
+        {total > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '1.5rem', color: '#ffbd2e', fontWeight: 900 }}>{total.toLocaleString()}</div>
+            <div style={{ fontSize: '0.85rem', color: remaining <= 0 ? '#ff4d4d' : '#888', marginTop: '4px', fontWeight: 700 }}>
+              남은 금액: {remaining.toLocaleString()}
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {sorted.map((r, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#111', borderRadius: '10px', padding: '10px 16px', border: `2px solid ${r.color}44` }}>
+              <span style={{ color: r.color, fontWeight: 900, fontSize: '1.1rem', minWidth: '24px', textAlign: 'center' }}>{r.result}</span>
+              <span style={{ color: 'white', fontWeight: 900, fontSize: '1rem', flex: 1, textAlign: 'left' }}>{r.name}</span>
+              {total > 0 && (
+                <input
+                  type="text"
+                  value={payments[i]}
+                  disabled={remaining <= 0 && !payments[i]}
+                  onChange={e => setPayment(i, e.target.value)}
+                  placeholder=""
+                  style={{ width: '90px', background: '#000', border: `1px solid ${r.color}66`, color: r.color, borderRadius: '6px', padding: '5px 8px', textAlign: 'center', fontWeight: 900, fontSize: '0.85rem', opacity: remaining <= 0 && !payments[i] ? 0.4 : 1 }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <button style={{ cursor: 'pointer', marginTop: '25px', background: '#00ffa3', color: '#000', border: 'none', padding: '12px 40px', borderRadius: '10px', fontWeight: 900 }} onClick={onClose}>확인 완료</button>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 // LadderGame, GroupMissionBoard, RouletteGame 컴포넌트는 동일하므로 생략하지 않고 최종 품질 유지
 const LadderGame: React.FC = () => {
   const [count, setCount] = useState(4);
   const [starts, setStarts] = useState<string[]>(Array(12).fill(''));
   const [ends, setEnds] = useState<string[]>(Array(12).fill(''));
   const [bridges, setBridges] = useState<{ row: number, col: number }[]>([]);
-  const [activePaths, setActivePaths] = useState<{ id: number, points: { x: number, y: number }[] }[]>([]);
+  const [activePaths, setActivePaths] = useState<{ id: number, points: { x: number, y: number }[], color: string }[]>([]);
   const [isBlind, setIsBlind] = useState(false);
+  const [isUiri, setIsUiri] = useState(false);
+  const [uiriAmount, setUiriAmount] = useState('');
   const [showResult, setShowResult] = useState<{ name: string, result: string } | null>(null);
+  const [showAllResults, setShowAllResults] = useState<{ name: string, result: string, color: string }[] | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const WIDTH = 1000; const HEIGHT = 800; const ROW_COUNT = 30;
-  const generateBridges = () => { const newBridges: { row: number, col: number }[] = []; for (let r = 2; r < ROW_COUNT - 2; r++) { for (let c = 0; c < count - 1; c++) { if (Math.random() > 0.72) { if (!newBridges.some(b => b.row === r && (b.col === c - 1 || b.col === c + 1))) { newBridges.push({ row: r, col: c }); } } } } setBridges(newBridges); setActivePaths([]); setShowResult(null); };
+  const PATH_COLORS = ['#ff4d4d','#4d9fff','#00ffa3','#ff9f4d','#c44dff','#ffee4d','#ff4dab','#4dffd6','#ff6b4d','#4dffb8','#a04dff','#ffbd2e'];
+  const generateBridges = () => { const newBridges: { row: number, col: number }[] = []; for (let r = 2; r < ROW_COUNT - 2; r++) { for (let c = 0; c < count - 1; c++) { if (Math.random() > 0.72) { if (!newBridges.some(b => b.row === r && (b.col === c - 1 || b.col === c + 1))) { newBridges.push({ row: r, col: c }); } } } } setBridges(newBridges); setActivePaths([]); setShowResult(null); setShowAllResults(null); };
   useEffect(() => generateBridges(), [count]);
-  const runPath = (startIdx: number) => { if (activePaths.some(p => p.id === startIdx)) return; let currCol = startIdx; const pts = [{ x: startIdx, y: 0 }]; for (let r = 1; r < ROW_COUNT; r++) { const bR = bridges.find(b => b.row === r && b.col === currCol); const bL = bridges.find(b => b.row === r && b.col === currCol - 1); if (bR) { pts.push({ x: currCol, y: r }); currCol++; pts.push({ x: currCol, y: r }); } else if (bL) { pts.push({ x: currCol, y: r }); currCol--; pts.push({ x: currCol, y: r }); } } pts.push({ x: currCol, y: ROW_COUNT }); const sPts = pts.map(p => ({ x: (p.x / (count - 1)) * WIDTH, y: (p.y / ROW_COUNT) * HEIGHT })); setActivePaths(prev => [...prev, { id: startIdx, points: sPts }]); let startTime: number | null = null; const animate = (ts: number) => { if (!startTime) startTime = ts; const progress = Math.min((ts - startTime) / 3500, 1); if (scrollRef.current) scrollRef.current.scrollTop = progress * HEIGHT - 200; if (progress < 1) requestAnimationFrame(animate); else { setShowResult({ name: starts[startIdx] || `${startIdx + 1}번`, result: ends[currCol] || `${currCol + 1}번 결과` }); } }; requestAnimationFrame(animate); };
+  useEffect(() => {
+    if (isUiri) {
+      const n = [...ends];
+      for (let i = 0; i < count; i++) n[i] = `${i + 1}`;
+      setEnds(n);
+    }
+  }, [isUiri, count]);
+  const calcPath = (startIdx: number, bridgesSnap: { row: number, col: number }[]) => { let currCol = startIdx; const pts = [{ x: startIdx, y: 0 }]; for (let r = 1; r < ROW_COUNT; r++) { const bR = bridgesSnap.find(b => b.row === r && b.col === currCol); const bL = bridgesSnap.find(b => b.row === r && b.col === currCol - 1); if (bR) { pts.push({ x: currCol, y: r }); currCol++; pts.push({ x: currCol, y: r }); } else if (bL) { pts.push({ x: currCol, y: r }); currCol--; pts.push({ x: currCol, y: r }); } } pts.push({ x: currCol, y: ROW_COUNT }); return { sPts: pts.map(p => ({ x: (p.x / (count - 1)) * WIDTH, y: (p.y / ROW_COUNT) * HEIGHT })), endCol: currCol }; };
+  const runPath = (startIdx: number, color?: string) => { if (activePaths.some(p => p.id === startIdx)) return; const pathColor = color || PATH_COLORS[startIdx % PATH_COLORS.length]; const { sPts, endCol } = calcPath(startIdx, bridges); setActivePaths(prev => [...prev, { id: startIdx, points: sPts, color: pathColor }]); let startTime: number | null = null; const animate = (ts: number) => { if (!startTime) startTime = ts; const progress = Math.min((ts - startTime) / 3500, 1); if (scrollRef.current) scrollRef.current.scrollTop = progress * HEIGHT - 200; if (progress < 1) requestAnimationFrame(animate); else { setShowResult({ name: starts[startIdx] || `${startIdx + 1}번`, result: ends[endCol] || `${endCol + 1}번 결과` }); } }; requestAnimationFrame(animate); };
+  const runAll = () => { setActivePaths([]); setShowResult(null); setShowAllResults(null); const results: { name: string, result: string, color: string }[] = []; const newPaths = Array.from({ length: count }).map((_, i) => { const color = PATH_COLORS[i % PATH_COLORS.length]; const { sPts, endCol } = calcPath(i, bridges); results.push({ name: starts[i] || `${i + 1}번`, result: ends[endCol] || `${endCol + 1}번 결과`, color }); return { id: i, points: sPts, color }; }); setActivePaths(newPaths); let startTime: number | null = null; const animate = (ts: number) => { if (!startTime) startTime = ts; const progress = Math.min((ts - startTime) / 3500, 1); if (scrollRef.current) scrollRef.current.scrollTop = progress * HEIGHT - 200; if (progress < 1) requestAnimationFrame(animate); else setShowAllResults(results); }; requestAnimationFrame(animate); };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 40px)', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111', padding: '15px 20px', borderRadius: '15px', marginBottom: '15px', border: '1px solid #222' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Users size={18} color="#ffbd2e" /><span style={{ fontWeight: 900, color: '#ffbd2e' }}>인원수</span> <input type="number" value={count} min={2} max={12} onChange={e => setCount(Number(e.target.value))} style={{ width: '50px', background: '#000', border: '1px solid #333', color: 'white', borderRadius: '5px', padding: '5px', textAlign: 'center' }} /></div>
           <button onClick={generateBridges} style={{ cursor: 'pointer', background: '#222', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '8px', fontWeight: 900, fontSize: '0.8rem' }}><RotateCcw size={14} style={{ marginRight: '5px' }} /> 새 판 짜기</button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+            <input type="checkbox" checked={isUiri} onChange={e => setIsUiri(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#00ffa3', cursor: 'pointer' }} />
+            <span style={{ fontWeight: 900, color: isUiri ? '#00ffa3' : '#888', fontSize: '0.85rem', transition: 'color 0.2s' }}>의리사다리</span>
+          </label>
+          {isUiri && (
+            <>
+              <input type="text" value={uiriAmount} onChange={e => setUiriAmount(e.target.value)} placeholder="금액" style={{ width: '90px', background: '#000', border: '1px solid #00ffa344', color: '#00ffa3', borderRadius: '5px', padding: '5px 8px', textAlign: 'center', fontWeight: 900, fontSize: '0.85rem' }} />
+              <button onClick={runAll} style={{ cursor: 'pointer', background: '#00ffa3', color: '#000', border: 'none', padding: '7px 14px', borderRadius: '8px', fontWeight: 900, fontSize: '0.85rem' }}>⚡ 동시 진행</button>
+            </>
+          )}
         </div>
         <button onClick={() => setIsBlind(!isBlind)} style={{ cursor: 'pointer', background: isBlind ? '#ffbd2e' : '#222', color: isBlind ? 'black' : '#ffbd2e', border: isBlind ? 'none' : '1px solid #ffbd2e44', padding: '8px 18px', borderRadius: '8px', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
           {isBlind ? <EyeOff size={16} /> : <Eye size={16} />} BLIND PROGRESS
         </button>
       </div>
       <AnimatePresence>{showResult && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '30px 50px', borderRadius: '30px', border: '4px solid #ffbd2e', textAlign: 'center', boxShadow: '0 0 50px rgba(255, 189, 46, 0.3)' }}><PartyPopper size={50} color="#ffbd2e" style={{ marginBottom: '15px' }} /><div style={{ fontSize: '1.8rem', color: 'white', fontWeight: 900 }}>{showResult.name}</div><div style={{ fontSize: '2rem', color: '#ffbd2e', fontWeight: 900, marginTop: '10px' }}>{showResult.result}</div><button style={{ cursor: 'pointer', marginTop: '25px', background: '#ffbd2e', border: 'none', padding: '12px 40px', borderRadius: '10px', fontWeight: 900 }} onClick={() => setShowResult(null)}>확인 완료</button></motion.div></motion.div>)}</AnimatePresence>
+      <AnimatePresence>{showAllResults && <AllResultsModal results={showAllResults} totalAmount={uiriAmount} onClose={() => setShowAllResults(null)} />}</AnimatePresence>
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', background: '#020202', border: '1px solid #111', borderRadius: '15px', position: 'relative', padding: '40px 0' }}>
         <svg viewBox={`-120 -80 ${WIDTH + 240} ${HEIGHT + 350}`} style={{ width: '1000px', height: 'auto', margin: '0 auto', display: 'block', overflow: 'visible' }}>
           {Array.from({ length: count }).map((_, i) => (<g key={i}><line x1={(i / (count - 1)) * WIDTH} y1="0" x2={(i / (count - 1)) * WIDTH} y2={HEIGHT} stroke="#222" strokeWidth="6" strokeLinecap="round" /><circle cx={(i / (count - 1)) * WIDTH} cy="0" r="6" fill="#ffbd2e" /><circle cx={(i / (count - 1)) * WIDTH} cy={HEIGHT} r="6" fill="#ffbd2e" /></g>))}
           {!isBlind && bridges.map((b, i) => (<line key={i} x1={(b.col / (count - 1)) * WIDTH} y1={(b.row / ROW_COUNT) * HEIGHT} x2={((b.col + 1) / (count - 1)) * WIDTH} y2={(b.row / ROW_COUNT) * HEIGHT} stroke="#ffbd2e44" strokeWidth="4" strokeLinecap="round" />))}
-          {!isBlind && activePaths.map((p) => (<motion.polyline key={p.id} points={p.points.map(pt => `${pt.x},${pt.y}`).join(' ')} fill="none" stroke="#ffbd2e" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 3.5, ease: "easeInOut" }} />))}
+          {!isBlind && activePaths.map((p) => (<motion.polyline key={p.id} points={p.points.map(pt => `${pt.x},${pt.y}`).join(' ')} fill="none" stroke={p.color} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 3.5, ease: "easeInOut" }} />))}
           {Array.from({ length: count }).map((_, i) => (<foreignObject key={i} x={(i / (count - 1)) * WIDTH - 85} y="-95" width="170" height="85"><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', background: '#000', border: '2px solid #ffbd2e', padding: '4px', borderRadius: '8px' }}><input placeholder="이름" value={starts[i]} onChange={e => { const n = [...starts]; n[i] = e.target.value; setStarts(n); }} style={{ width: '100px', background: 'none', color: 'white', border: 'none', textAlign: 'center', fontWeight: 800 }} /><button onClick={() => runPath(i)} style={{ cursor: 'pointer', background: '#ffbd2e', border: 'none', width: '30px', borderRadius: '5px', height: '30px', fontWeight: 900 }}>▶</button></div></div></foreignObject>))}
-          {Array.from({ length: count }).map((_, i) => (<foreignObject key={i} x={(i / (count - 1)) * WIDTH - 80} y={HEIGHT + 25} width="160" height="70"><div style={{ textAlign: 'center' }}><input placeholder="결과" value={ends[i]} onChange={e => { const n = [...ends]; n[i] = e.target.value; setEnds(n); }} style={{ width: '150px', background: '#000', border: '2px solid #222', color: '#ffbd2e', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '1rem', fontWeight: 800 }} /></div></foreignObject>))}
+          {Array.from({ length: count }).map((_, i) => (<foreignObject key={i} x={(i / (count - 1)) * WIDTH - 80} y={HEIGHT + 25} width="160" height="70"><div style={{ textAlign: 'center' }}><input placeholder="결과" value={ends[i]} readOnly={isUiri} onChange={e => { if (isUiri) return; const n = [...ends]; n[i] = e.target.value; setEnds(n); }} style={{ width: '150px', background: '#000', border: `2px solid ${isUiri ? '#00ffa344' : '#222'}`, color: '#ffbd2e', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '1rem', fontWeight: 800, opacity: isUiri ? 0.7 : 1 }} /></div></foreignObject>))}
         </svg>
       </div>
     </div>
