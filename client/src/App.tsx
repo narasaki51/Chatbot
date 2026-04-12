@@ -34,8 +34,9 @@ const LoginPage: React.FC<{ onSuccess: (user: UserAuth) => void }> = ({ onSucces
   };
 
   return (
-    <div style={{ width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050505', color: 'white' }}>
-      <form onSubmit={handleLogin} style={{ background: '#111', padding: '40px', borderRadius: '20px', width: '350px', border: '1px solid #333', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'url(/login-bg.png) center bottom / 100% 100% no-repeat', color: 'white', position: 'relative' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />
+      <form onSubmit={handleLogin} style={{ position: 'relative', zIndex: 1, background: 'rgba(10,10,10,0.85)', padding: '40px', borderRadius: '20px', width: '350px', border: '1px solid #333', boxShadow: '0 10px 40px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', gap: '20px', backdropFilter: 'blur(6px)' }}>
         <h2 style={{ textAlign: 'center', color: '#00ffa3', display: 'flex', justifyContent: 'center', gap: '10px', alignItems: 'center' }}><Lock /> 시스템 로그인</h2>
         <input placeholder="아이디" value={id} onChange={e => setId(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #444', background: '#222', color: 'white', outline: 'none' }} />
         <input type="password" placeholder="비밀번호" value={pw} onChange={e => setPw(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #444', background: '#222', color: 'white', outline: 'none' }} />
@@ -53,7 +54,7 @@ const AppMain: React.FC = () => {
     } catch {}
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating'>('dashboard');
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
@@ -172,17 +173,17 @@ const AppMain: React.FC = () => {
   }
 
   // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정 (사다리/룰렛은 허용)
-  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette') {
+  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating') {
     setView('group');
   }
-  // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정
-  if (user.role === 'guest' && view !== 'roulette') {
+  // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정 (사다리 허용)
+  if (user.role === 'guest' && view !== 'roulette' && view !== 'ladder') {
     setView('roulette');
   }
 
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: '#050505', padding: '15px', color: 'white', boxSizing: 'border-box' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1.5px solid #111', paddingBottom: '15px', position: 'relative', zIndex: 100 }}>
+    <div style={{ width: '100%', minHeight: '100vh', background: '#050505', padding: '15px', paddingTop: '80px', color: 'white', boxSizing: 'border-box' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1.5px solid #111', paddingBottom: '15px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: '#050505', padding: '15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Zap size={24} color="#00ffa3" fill="#00ffa333" />
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#00ffa3', letterSpacing: '-1px' }}>찌모의 놀이터 <span style={{ fontSize: '0.8rem', color: '#888' }}>({user.name})</span></h1>
@@ -191,6 +192,14 @@ const AppMain: React.FC = () => {
         {user.role === 'member' && (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
+            <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
+            <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
+            <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+          </div>
+        )}
+
+        {user.role === 'guest' && (
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
           </div>
@@ -204,6 +213,7 @@ const AppMain: React.FC = () => {
             <div style={{ width: '1px', background: '#333', margin: '0 5px' }}></div>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+            <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
             <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
             <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
           </div>
@@ -253,7 +263,12 @@ const AppMain: React.FC = () => {
         )}
       </header>
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%', position: 'relative' }}>
+        {(view === 'group' || view === 'rating') && <>
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '32vw', height: '100vh', zIndex: 0, pointerEvents: 'none', backgroundImage: 'url(/login-bg.png)', backgroundSize: '200% 100%', backgroundPosition: 'left center', backgroundRepeat: 'no-repeat', maskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)' }} />
+          <div style={{ position: 'fixed', top: 0, right: 0, width: '32vw', height: '100vh', zIndex: 0, pointerEvents: 'none', backgroundImage: 'url(/login-bg.png)', backgroundSize: '200% 100%', backgroundPosition: 'right center', backgroundRepeat: 'no-repeat', maskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)' }} />
+        </>}
+        <div style={{ position: 'relative', zIndex: 1 }}>
         {view === 'dashboard' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {(user.role === 'admin' || user.role === 'host') && (
@@ -320,9 +335,12 @@ const AppMain: React.FC = () => {
           <HamsterChatBot key="chatbot-comp-last" />
         ) : view === 'pinball' ? (
           <PinballGame key="pinball-comp-last" />
+        ) : view === 'rating' ? (
+          <RatingBoard key="rating-comp-last" user={user!} />
         ) : (
           <RouletteGame key="roul-comp-last" user={user!} />
         )}
+        </div>
       </div>
     </div>
   );
@@ -1733,6 +1751,445 @@ const RouletteGame: React.FC<{ user: UserAuth }> = ({ user }) => {
 
         <AnimatePresence>{winner && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '60px 100px', borderRadius: '40px', border: '5px solid #ff2eb4', textAlign: 'center', boxShadow: '0 0 100px rgba(255, 46, 180, 0.6)' }}><PartyPopper size={80} color="#ff2eb4" style={{ marginBottom: '25px' }} /><div style={{ color: 'white', fontSize: '4.8rem', fontWeight: 900, textShadow: '0 0 40px #ff2eb4' }}>{winner}</div><button onClick={() => setWinner(null)} style={{ cursor: 'pointer', marginTop: '40px', background: 'white', color: 'black', padding: '15px 70px', borderRadius: '15px', fontWeight: 900 }}>CLOSE</button></motion.div></motion.div>)}</AnimatePresence>
       </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// 🏆 레이팅 보드
+// ─────────────────────────────────────────────
+type RatingLeague = '4000' | '5000' | '6000';
+interface RatingCharacter {
+  id: string;
+  memberName: string;
+  characterName: string;
+  league: RatingLeague;
+  score: number;   // 등록 시 입력한 고정 점수
+  rating: number;  // 대결로 변동되는 레이팅 (1000 시작)
+  wins: number;
+  losses: number;
+  registeredAt: string;
+}
+
+const LEAGUE_CONFIG: Record<RatingLeague, { label: string; color: string; bg: string; minRating: number }> = {
+  '4000': { label: '4000점 리그', color: '#60a5fa', bg: 'linear-gradient(135deg, #0f1f3d 0%, #050d1f 100%)', minRating: 4000 },
+  '5000': { label: '5000점 리그', color: '#34d399', bg: 'linear-gradient(135deg, #0a2a1e 0%, #050f0a 100%)', minRating: 5000 },
+  '6000': { label: '6000점 리그', color: '#f59e0b', bg: 'linear-gradient(135deg, #2a1a00 0%, #0f0800 100%)', minRating: 6000 },
+};
+
+const MEMBERS = ['찌모', '미랑', '갱쥰', '서씨', '떠기', '말구'];
+
+const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
+  const [characters, setCharacters] = useState<RatingCharacter[]>([]);
+  const [battles, setBattles] = useState<any[]>([]);
+  const [activeLeague, setActiveLeague] = useState<RatingLeague>('4000');
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [regForm, setRegForm] = useState({ memberName: '', characterName: '', league: '4000' as RatingLeague, initialRating: '' });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState('');
+  const [challengeTargetId, setChallengeTargetId] = useState<string | null>(null);
+  const [submittingBattleId, setSubmittingBattleId] = useState<string | null>(null);
+
+  const API = 'http://localhost:4000';
+
+  const fetchRating = async () => {
+    const res = await fetch(`${API}/rating`);
+    const data = await res.json();
+    setCharacters(data.characters || []);
+    setBattles(data.battles || []);
+  };
+
+  useEffect(() => {
+    fetchRating();
+    // Socket.IO 실시간 업데이트 (전역 socket 재사용)
+    const onRatingUpdate = (db: any) => { setCharacters(db.characters || []); setBattles(db.battles || []); };
+    socket.on('ratingUpdate', onRatingUpdate);
+    return () => { socket.off('ratingUpdate', onRatingUpdate); };
+  }, []);
+
+  const leagueChars = characters
+    .filter(c => c.league === activeLeague)
+    .sort((a, b) => b.rating - a.rating);
+
+  const handleRegister = async () => {
+    setErrorMsg('');
+    if (!regForm.memberName || !regForm.characterName) { setErrorMsg('멤버와 캐릭터명을 입력하세요'); return; }
+    const ratingNum = parseInt(regForm.initialRating);
+    if (!regForm.initialRating || isNaN(ratingNum) || ratingNum < 0) { setErrorMsg('올바른 점수를 입력하세요'); return; }
+    setLoading(true);
+    const res = await fetch(`${API}/rating/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...regForm, initialRating: ratingNum })
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.success) {
+      setShowRegisterModal(false);
+      setRegForm({ memberName: '', characterName: '', league: '4000', initialRating: '' });
+      fetchRating();
+    } else {
+      setErrorMsg(data.message || '등록 실패');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('캐릭터를 삭제하시겠습니까?')) return;
+    await fetch(`${API}/rating/${id}`, { method: 'DELETE' });
+    fetchRating();
+  };
+
+  const handleEditRating = async (id: string) => {
+    const val = parseInt(editRating);
+    if (isNaN(val) || val < 0) return;
+    await fetch(`${API}/rating/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setRating: val })
+    });
+    setEditingId(null);
+    setEditRating('');
+    fetchRating();
+  };
+
+  // 대결 신청
+  const handleChallenge = async (challengerId: string, defenderId: string) => {
+    const res = await fetch(`${API}/rating/battle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challengerId, defenderId })
+    });
+    const data = await res.json();
+    if (!data.success) alert(data.message);
+    setChallengeTargetId(null);
+    fetchRating();
+  };
+
+  // 대결 수락/거절
+  const handleBattleAction = async (battleId: string, action: 'accept' | 'reject') => {
+    await fetch(`${API}/rating/battle/${battleId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    fetchRating();
+  };
+
+  // 결과 입력
+  const handleBattleResult = async (battleId: string, winnerId: string) => {
+    if (submittingBattleId) return;
+    setSubmittingBattleId(battleId);
+    await fetch(`${API}/rating/battle/${battleId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'result', winnerId })
+    });
+    await fetchRating();
+    setSubmittingBattleId(null);
+  };
+
+  // 대결 삭제
+  const handleBattleDelete = async (battleId: string) => {
+    if (!confirm('대결 기록을 삭제하시겠습니까?')) return;
+    await fetch(`${API}/rating/battle/${battleId}`, { method: 'DELETE' });
+    fetchRating();
+  };
+
+  const cfg = LEAGUE_CONFIG[activeLeague];
+  const isAdmin = user.role === 'admin' || user.role === 'host';
+  const isMember = MEMBERS.includes(user.name);
+  const canRegister = isAdmin || isMember;
+  // 현재 리그에서 본인 캐릭터
+  const myLeagueChar = characters.find(c => c.memberName === user.name && c.league === activeLeague) || null;
+  // 현재 리그 대결 목록
+  const leagueBattles = battles.filter(b => b.league === activeLeague);
+
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
+  };
+
+  return (
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '10px 0' }}>
+      {/* 리그 탭 */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+        {(['4000', '5000', '6000'] as RatingLeague[]).map(lg => {
+          const c = LEAGUE_CONFIG[lg];
+          const isActive = activeLeague === lg;
+          const count = characters.filter(ch => ch.league === lg).length;
+          return (
+            <button key={lg} onClick={() => setActiveLeague(lg)} style={{
+              flex: 1, padding: '14px', borderRadius: '14px', border: `2px solid ${isActive ? c.color : '#222'}`,
+              background: isActive ? c.bg : '#0a0a0a', color: isActive ? c.color : '#555',
+              fontWeight: 900, fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+            }}>
+              <span>{c.label}</span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{count}명 참가</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 리그 헤더 */}
+      <div style={{ background: cfg.bg, border: `1px solid ${cfg.color}33`, borderRadius: '16px', padding: '20px 24px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, color: cfg.color, fontWeight: 900, fontSize: '1.4rem' }}>🏆 {cfg.label}</h2>
+          <p style={{ margin: '4px 0 0', color: '#888', fontSize: '0.85rem' }}>기준 레이팅: {cfg.minRating}점 · 승 +20 / 패 -20</p>
+        </div>
+        {canRegister && (
+          <button onClick={() => {
+            setShowRegisterModal(true);
+            // 멤버면 자동으로 본인 이름 세팅
+            setRegForm({ memberName: isMember && !isAdmin ? user.name : '', characterName: '', league: activeLeague, initialRating: '' });
+          }} style={{
+            background: cfg.color, color: '#000', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem'
+          }}>+ 캐릭터 등록</button>
+        )}
+      </div>
+
+      {/* 순위표 */}
+      {leagueChars.length === 0 ? (
+        <div style={{ textAlign: 'center', color: '#444', padding: '60px 0', fontSize: '1rem' }}>
+          등록된 캐릭터가 없습니다.<br />
+          <span style={{ fontSize: '0.85rem', color: '#333' }}>관리자가 캐릭터를 등록하면 여기에 표시됩니다.</span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {leagueChars.map((char, idx) => {
+            const rank = idx + 1;
+            const winRate = char.wins + char.losses > 0 ? Math.round(char.wins / (char.wins + char.losses) * 100) : 0;
+            return (
+              <div key={char.id} style={{
+                background: rank === 1 ? `${cfg.bg}, linear-gradient(90deg, ${cfg.color}11 0%, transparent 100%)` : '#0d0d0d',
+                border: `1px solid ${rank <= 3 ? cfg.color + '44' : '#1a1a1a'}`,
+                borderRadius: '12px', padding: '16px 20px',
+                display: 'flex', alignItems: 'center', gap: '16px',
+                transition: 'all 0.2s'
+              }}>
+                {/* 순위 */}
+                <div style={{ minWidth: '40px', textAlign: 'center', fontSize: rank <= 3 ? '1.5rem' : '1rem', fontWeight: 900, color: rank <= 3 ? cfg.color : '#555' }}>
+                  {getRankIcon(rank)}
+                </div>
+                {/* 캐릭터 정보 */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#fff' }}>{char.characterName}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#666', background: '#1a1a1a', padding: '2px 8px', borderRadius: '20px' }}>{char.memberName}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: '#666' }}>
+                    <span style={{ color: '#4ade80' }}>▲ {char.wins}승</span>
+                    <span style={{ color: '#f87171' }}>▼ {char.losses}패</span>
+                    <span>승률 {winRate}%</span>
+                  </div>
+                </div>
+                {/* 점수(고정) + 레이팅 */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', minWidth: '130px' }}>
+                  {/* 고정 점수 */}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#555', marginBottom: '1px' }}>점수 (고정)</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: cfg.color }}>{(char.score ?? char.rating).toLocaleString()}<span style={{ fontSize: '0.7rem', fontWeight: 400, color: '#555', marginLeft: '3px' }}>점</span></div>
+                  </div>
+                  {/* 레이팅 (대결 변동) */}
+                  {editingId === char.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editRating}
+                        onChange={e => setEditRating(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleEditRating(char.id); if (e.key === 'Escape') { setEditingId(null); setEditRating(''); } }}
+                        autoFocus
+                        style={{ width: '90px', padding: '5px 8px', borderRadius: '6px', border: '1px solid #a78bfa', background: '#0a0a0a', color: '#a78bfa', fontSize: '0.95rem', fontWeight: 900, textAlign: 'right' }}
+                      />
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={() => handleEditRating(char.id)} style={{ background: '#a78bfa', color: '#000', border: 'none', padding: '3px 8px', borderRadius: '5px', fontWeight: 900, cursor: 'pointer', fontSize: '0.75rem' }}>저장</button>
+                        <button onClick={() => { setEditingId(null); setEditRating(''); }} style={{ background: '#1a1a1a', color: '#888', border: '1px solid #333', padding: '3px 6px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => isAdmin ? (setEditingId(char.id), setEditRating(String(char.rating))) : null}
+                      title={isAdmin ? '클릭해서 레이팅 수정' : ''}
+                      style={{ textAlign: 'right', cursor: isAdmin ? 'pointer' : 'default' }}
+                    >
+                      <div style={{ fontSize: '0.72rem', color: '#555', marginBottom: '1px' }}>레이팅</div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#a78bfa' }}>{char.rating.toLocaleString()}<span style={{ fontSize: '0.7rem', fontWeight: 400, color: '#555', marginLeft: '3px' }}>점</span></div>
+                    </div>
+                  )}
+                </div>
+                {/* 대결 신청 버튼 (본인 캐릭터 아닌 경우) */}
+                {char.memberName !== user.name && myLeagueChar && char.id !== myLeagueChar.id && (() => {
+                  const hasOngoing = battles.some(b =>
+                    ['pending','accepted'].includes(b.status) &&
+                    ([b.challengerId, b.defenderId].includes(myLeagueChar.id)) &&
+                    ([b.challengerId, b.defenderId].includes(char.id))
+                  );
+                  return !hasOngoing ? (
+                    challengeTargetId === char.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#aaa', textAlign: 'center' }}>대결 신청?</span>
+                        <button onClick={() => handleChallenge(myLeagueChar.id, char.id)} style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>확인 ⚔️</button>
+                        <button onClick={() => setChallengeTargetId(null)} style={{ background: '#1a1a1a', color: '#666', border: '1px solid #333', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setChallengeTargetId(char.id)} style={{ background: '#2d1b6e', color: '#a78bfa', border: '1px solid #4c1d95', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>⚔️ 대결 신청</button>
+                    )
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: '#555', padding: '8px', whiteSpace: 'nowrap' }}>대결 중</span>
+                  );
+                })()}
+                {/* 관리자 버튼 */}
+                {isAdmin && (
+                  <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
+                    <button onClick={() => handleDelete(char.id)} style={{ background: '#1a1a1a', color: '#555', border: '1px solid #333', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>삭제</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 대결 목록 */}
+      {leagueBattles.length > 0 && (
+        <div style={{ marginTop: '32px' }}>
+          <h3 style={{ color: '#888', fontWeight: 900, fontSize: '1rem', margin: '0 0 12px', letterSpacing: '0.5px' }}>⚔️ 대결 현황</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {leagueBattles.map(b => {
+              const isPending   = b.status === 'pending';
+              const isAccepted  = b.status === 'accepted';
+              const isCompleted = b.status === 'completed';
+              const _isRejected  = b.status === 'rejected'; void _isRejected;
+              const isDefender  = b.defenderMember === user.name;
+              const statusColor = isPending ? '#f59e0b' : isAccepted ? '#60a5fa' : isCompleted ? '#4ade80' : '#555';
+              const statusLabel = isPending ? '신청 중' : isAccepted ? '대결 수락됨' : isCompleted ? '완료' : '거절됨';
+
+              return (
+                <div key={b.id} style={{ background: '#0d0d0d', border: `1px solid ${statusColor}33`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* 상태 뱃지 */}
+                  <span style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}55`, borderRadius: '20px', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap' }}>{statusLabel}</span>
+
+                  {/* 대결 정보 */}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 900, color: b.winnerId === b.challengerId ? '#4ade80' : b.loserId === b.challengerId ? '#f87171' : '#fff' }}>{b.challengerName}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#555' }}>({b.challengerMember})</span>
+                    <span style={{ color: '#444', fontWeight: 900 }}>vs</span>
+                    <span style={{ fontWeight: 900, color: b.winnerId === b.defenderId ? '#4ade80' : b.loserId === b.defenderId ? '#f87171' : '#fff' }}>{b.defenderName}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#555' }}>({b.defenderMember})</span>
+                    {isCompleted && (
+                      <span style={{ fontSize: '0.8rem', color: '#4ade80', fontWeight: 900 }}>
+                        🏆 {b.winnerId === b.challengerId ? b.challengerName : b.defenderName} 승리 · ±{b.ratingChange}점
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 액션 버튼 */}
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {/* 수락/거절 - 상대방 본인 or admin */}
+                    {isPending && (isDefender || isAdmin) && (
+                      <>
+                        <button onClick={() => handleBattleAction(b.id, 'accept')} style={{ background: '#1e3a5f', color: '#60a5fa', border: '1px solid #1d4ed8', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>✅ 수락</button>
+                        <button onClick={() => handleBattleAction(b.id, 'reject')} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>❌ 거절</button>
+                      </>
+                    )}
+                    {/* 결과 입력 - 대결 참여 멤버 양쪽 or admin */}
+                    {isAccepted && (isAdmin || b.challengerMember === user.name || b.defenderMember === user.name) && (() => {
+                      const isSubmitting = submittingBattleId === b.id;
+                      return (
+                        <>
+                          <button disabled={isSubmitting} onClick={() => handleBattleResult(b.id, b.challengerId)} style={{ background: isSubmitting ? '#1a1a1a' : '#14532d', color: isSubmitting ? '#444' : '#4ade80', border: '1px solid #166534', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? '처리 중...' : `🏆 ${b.challengerName} 승`}</button>
+                          <button disabled={isSubmitting} onClick={() => handleBattleResult(b.id, b.defenderId)} style={{ background: isSubmitting ? '#1a1a1a' : '#14532d', color: isSubmitting ? '#444' : '#4ade80', border: '1px solid #166534', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? '처리 중...' : `🏆 ${b.defenderName} 승`}</button>
+                        </>
+                      );
+                    })()}
+                    {/* 삭제 - admin만 */}
+                    {isAdmin && (
+                      <button onClick={() => handleBattleDelete(b.id)} style={{ background: 'transparent', color: '#333', border: '1px solid #222', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 등록 모달 */}
+      {showRegisterModal && (
+        <div style={{ position: 'fixed', inset: 0, background: '#000000cc', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#111', border: '1px solid #333', borderRadius: '20px', padding: '32px', width: '380px', maxWidth: '90vw' }}>
+            <h3 style={{ margin: '0 0 20px', color: '#fff', fontWeight: 900 }}>🏆 캐릭터 등록</h3>
+
+            <label style={{ display: 'block', color: '#888', fontSize: '0.85rem', marginBottom: '6px' }}>리그 선택</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              {(['4000', '5000', '6000'] as RatingLeague[]).map(lg => (
+                <button key={lg} onClick={() => setRegForm(f => ({ ...f, league: lg }))} style={{
+                  flex: 1, padding: '8px', borderRadius: '8px', border: `1px solid ${regForm.league === lg ? LEAGUE_CONFIG[lg].color : '#333'}`,
+                  background: regForm.league === lg ? LEAGUE_CONFIG[lg].bg : 'transparent',
+                  color: regForm.league === lg ? LEAGUE_CONFIG[lg].color : '#555',
+                  fontWeight: 900, cursor: 'pointer', fontSize: '0.85rem'
+                }}>{lg}점</button>
+              ))}
+            </div>
+
+            <label style={{ display: 'block', color: '#888', fontSize: '0.85rem', marginBottom: '6px' }}>멤버</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: isAdmin ? '8px' : '16px' }}>
+              {(isAdmin ? MEMBERS : [user.name]).map(m => (
+                <button key={m} onClick={() => isAdmin && setRegForm(f => ({ ...f, memberName: m }))} style={{
+                  padding: '7px 14px', borderRadius: '20px', border: `1px solid ${regForm.memberName === m ? '#00ffa3' : '#333'}`,
+                  background: regForm.memberName === m ? '#0a2a1e' : 'transparent',
+                  color: regForm.memberName === m ? '#00ffa3' : '#666',
+                  fontWeight: 700, cursor: isAdmin ? 'pointer' : 'default', fontSize: '0.85rem'
+                }}>{m} {!isAdmin && <span style={{ color: '#555', fontSize: '0.75rem' }}>(나)</span>}</button>
+              ))}
+            </div>
+            {/* 게스트 옵션 - admin/host만 */}
+            {isAdmin && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ width: '100%', height: '1px', background: '#1a1a1a', margin: '0 0 8px' }} />
+                <button onClick={() => setRegForm(f => ({ ...f, memberName: '게스트' }))} style={{
+                  padding: '7px 14px', borderRadius: '20px', border: `1px solid ${regForm.memberName === '게스트' ? '#f59e0b' : '#333'}`,
+                  background: regForm.memberName === '게스트' ? '#2a1a00' : 'transparent',
+                  color: regForm.memberName === '게스트' ? '#f59e0b' : '#666',
+                  fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem'
+                }}>👤 게스트 <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>(여러 캐릭 가능)</span></button>
+              </div>
+            )}
+
+            <label style={{ display: 'block', color: '#888', fontSize: '0.85rem', marginBottom: '6px' }}>캐릭터명</label>
+            <input
+              value={regForm.characterName}
+              onChange={e => setRegForm(f => ({ ...f, characterName: e.target.value }))}
+              placeholder="캐릭터명 입력"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #333', background: '#0a0a0a', color: '#fff', fontSize: '0.95rem', boxSizing: 'border-box', marginBottom: '12px' }}
+            />
+
+            <label style={{ display: 'block', color: '#888', fontSize: '0.85rem', marginBottom: '6px' }}>현재 점수</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={regForm.initialRating}
+              onChange={e => setRegForm(f => ({ ...f, initialRating: e.target.value }))}
+              placeholder={`점수 입력 (예: ${regForm.league})`}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${LEAGUE_CONFIG[regForm.league].color}55`, background: '#0a0a0a', color: LEAGUE_CONFIG[regForm.league].color, fontSize: '1rem', fontWeight: 900, boxSizing: 'border-box', marginBottom: '12px' }}
+            />
+
+            {errorMsg && <p style={{ color: '#f87171', fontSize: '0.85rem', margin: '0 0 12px' }}>{errorMsg}</p>}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => { setShowRegisterModal(false); setErrorMsg(''); }} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #333', background: 'transparent', color: '#888', fontWeight: 700, cursor: 'pointer' }}>취소</button>
+              <button onClick={handleRegister} disabled={loading} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: LEAGUE_CONFIG[regForm.league].color, color: '#000', fontWeight: 900, cursor: 'pointer' }}>
+                {loading ? '등록 중...' : '등록하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -368,9 +368,11 @@ app.delete('/missions/:id', (req, res) => {
   res.status(204).send();
 });
 
-// [최적화된 Catch-all] 모든 알 수 없는 요청은 React로 전달
+// [최적화된 Catch-all] API 경로가 아닌 요청만 React로 전달
+const API_PREFIXES = ['/missions', '/login', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating'];
 app.use((req, res, next) => {
-  if (req.method === 'GET' && !req.path.startsWith('/missions') && !req.path.startsWith('/test-donation')) {
+  const isApi = API_PREFIXES.some(prefix => req.path.startsWith(prefix));
+  if (req.method === 'GET' && !isApi) {
     const indexPath = path.join(__dirname, '../client/dist/index.html');
     res.sendFile(indexPath, (err) => { if (err) next(); });
   } else {
@@ -469,6 +471,234 @@ app.post('/auto-accept', (req, res) => {
   io.emit('autoAcceptUpdate', isAutoAccept);
   console.log(`⚙️ [Config Change] Mission Auto Accept: ${isAutoAccept}`);
   res.json({ success: true, enabled: isAutoAccept });
+});
+
+// ==================== 레이팅 보드 ====================
+const RATING_DB_PATH = path.join(__dirname, 'rating_db.json');
+if (!fs.existsSync(RATING_DB_PATH)) fs.writeFileSync(RATING_DB_PATH, JSON.stringify({ characters: [] }));
+
+const getRatingDB = () => JSON.parse(fs.readFileSync(RATING_DB_PATH, 'utf-8'));
+const saveRatingDB = (data: any) => fs.writeFileSync(RATING_DB_PATH, JSON.stringify(data, null, 2));
+
+// 기존 캐릭터 마이그레이션: score 없으면 rating값을 score로, rating은 1000으로 초기화
+(() => {
+  const db = getRatingDB();
+  let changed = false;
+  (db.characters || []).forEach((c: any) => {
+    if (c.score === undefined) {
+      c.score = c.rating;
+      c.rating = 1000;
+      changed = true;
+    }
+  });
+  if (changed) saveRatingDB(db);
+})();
+
+// 전체 캐릭터 조회
+app.get('/rating', (req, res) => {
+  res.json(getRatingDB());
+});
+
+// 캐릭터 등록
+app.post('/rating/register', (req, res) => {
+  const { memberName, characterName, league, initialRating } = req.body;
+  if (!memberName || !characterName || !league) return res.status(400).json({ success: false, message: '필수 값 누락' });
+  if (!['4000', '5000', '6000'].includes(league)) return res.status(400).json({ success: false, message: '유효하지 않은 리그' });
+  if (initialRating === undefined || initialRating === null || isNaN(Number(initialRating))) return res.status(400).json({ success: false, message: '올바른 점수를 입력하세요' });
+
+  const db = getRatingDB();
+  // 게스트는 여러 캐릭터 등록 가능, 멤버는 리그별 1개 제한
+  if (memberName !== '게스트') {
+    const exists = db.characters.find((c: any) => c.memberName === memberName && c.league === league);
+    if (exists) return res.status(409).json({ success: false, message: '이미 해당 리그에 캐릭터가 등록되어 있습니다' });
+  }
+
+  const newChar = {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    memberName,
+    characterName,
+    league,
+    score: Number(initialRating),  // 등록 시 입력한 고정 점수
+    rating: 1000,                  // 대결 레이팅 (1000 시작)
+    wins: 0,
+    losses: 0,
+    registeredAt: new Date().toISOString()
+  };
+  db.characters.push(newChar);
+  saveRatingDB(db);
+  io.emit('ratingUpdate', db);
+  res.json({ success: true, character: newChar });
+});
+
+// 캐릭터 삭제
+app.delete('/rating/:id', (req, res) => {
+  const db = getRatingDB();
+  db.characters = db.characters.filter((c: any) => c.id !== req.params.id);
+  saveRatingDB(db);
+  io.emit('ratingUpdate', db);
+  res.json({ success: true });
+});
+
+// 레이팅 업데이트 (승/패 or 직접 수정)
+app.patch('/rating/:id', (req, res) => {
+  const { result, ratingChange, setRating } = req.body;
+  const db = getRatingDB();
+  const char = db.characters.find((c: any) => c.id === req.params.id);
+  if (!char) return res.status(404).json({ success: false, message: '캐릭터 없음' });
+
+  if (setRating !== undefined) {
+    // 점수 직접 수정
+    char.rating = Math.max(0, Number(setRating));
+  } else if (result === 'win') {
+    char.wins += 1;
+    char.rating += (ratingChange || 20);
+  } else if (result === 'loss') {
+    char.losses += 1;
+    char.rating = Math.max(0, char.rating - (ratingChange || 20));
+  }
+
+  saveRatingDB(db);
+  io.emit('ratingUpdate', db);
+  res.json({ success: true, character: char });
+});
+
+// ── 대결 시스템 ──
+// DB 초기화 시 battles 배열 보장
+const ensureBattles = (db: any) => { if (!db.battles) db.battles = []; return db; };
+
+// 대전 기록 별도 DB
+const BATTLE_LOG_PATH = path.join(__dirname, 'battle_log_db.json');
+if (!fs.existsSync(BATTLE_LOG_PATH)) fs.writeFileSync(BATTLE_LOG_PATH, JSON.stringify({ logs: [] }, null, 2));
+const getBattleLog = () => JSON.parse(fs.readFileSync(BATTLE_LOG_PATH, 'utf-8'));
+const saveBattleLog = (data: any) => fs.writeFileSync(BATTLE_LOG_PATH, JSON.stringify(data, null, 2));
+const appendBattleLog = (entry: any) => {
+  const log = getBattleLog();
+  log.logs.push(entry);
+  saveBattleLog(log);
+};
+
+// 대결 신청
+app.post('/rating/battle', (req, res) => {
+  const { challengerId, defenderId } = req.body;
+  if (!challengerId || !defenderId) return res.status(400).json({ success: false, message: '필수 값 누락' });
+
+  const db = ensureBattles(getRatingDB());
+  const challenger = db.characters.find((c: any) => c.id === challengerId);
+  const defender = db.characters.find((c: any) => c.id === defenderId);
+  if (!challenger || !defender) return res.status(404).json({ success: false, message: '캐릭터 없음' });
+  if (challenger.league !== defender.league) return res.status(400).json({ success: false, message: '같은 리그끼리만 대결 가능' });
+
+  // 이미 진행 중인 대결 확인 (pending or accepted)
+  const ongoing = db.battles.find((b: any) =>
+    ['pending', 'accepted'].includes(b.status) &&
+    [b.challengerId, b.defenderId].includes(challengerId) &&
+    [b.challengerId, b.defenderId].includes(defenderId)
+  );
+  if (ongoing) return res.status(409).json({ success: false, message: '이미 진행 중인 대결이 있습니다' });
+
+  const battle = {
+    id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    challengerId, challengerName: challenger.characterName, challengerMember: challenger.memberName,
+    defenderId,   defenderName: defender.characterName,   defenderMember: defender.memberName,
+    league: challenger.league,
+    status: 'pending',
+    ratingChange: 20,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.battles.push(battle);
+  saveRatingDB(db);
+  io.emit('ratingUpdate', db);
+  res.json({ success: true, battle });
+});
+
+// 대결 수락 / 거절 / 결과
+app.patch('/rating/battle/:id', (req, res) => {
+  const { action, winnerId } = req.body;
+  // action: 'accept' | 'reject' | 'result'
+  const db = ensureBattles(getRatingDB());
+  const battle = db.battles.find((b: any) => b.id === req.params.id);
+  if (!battle) return res.status(404).json({ success: false, message: '대결 없음' });
+
+  if (action === 'accept') {
+    battle.status = 'accepted';
+    battle.updatedAt = new Date().toISOString();
+
+  } else if (action === 'reject') {
+    battle.status = 'rejected';
+    battle.updatedAt = new Date().toISOString();
+
+  } else if (action === 'result') {
+    if (!winnerId) return res.status(400).json({ success: false, message: 'winnerId 필요' });
+    const loserId = winnerId === battle.challengerId ? battle.defenderId : battle.challengerId;
+
+    const winner = db.characters.find((c: any) => c.id === winnerId);
+    const loser  = db.characters.find((c: any) => c.id === loserId);
+    if (!winner || !loser) return res.status(404).json({ success: false, message: '캐릭터 없음' });
+
+    winner.wins   += 1;
+    winner.rating += battle.ratingChange;
+    loser.losses  += 1;
+    loser.rating   = Math.max(0, loser.rating - battle.ratingChange);
+
+    battle.status   = 'completed';
+    battle.winnerId = winnerId;
+    battle.loserId  = loserId;
+    battle.updatedAt = new Date().toISOString();
+
+    // 대전 기록 별도 저장
+    appendBattleLog({
+      type: 'result',
+      battleId: battle.id,
+      league: battle.league,
+      challengerName: battle.challengerName, challengerMember: battle.challengerMember,
+      defenderName: battle.defenderName,     defenderMember: battle.defenderMember,
+      winnerName: winner.characterName,      winnerMember: winner.memberName,
+      loserName: loser.characterName,        loserMember: loser.memberName,
+      ratingChange: battle.ratingChange,
+      winnerRatingAfter: winner.rating,
+      loserRatingAfter: loser.rating,
+      recordedAt: new Date().toISOString()
+    });
+  }
+
+  saveRatingDB(db);
+  io.emit('ratingUpdate', db);
+  res.json({ success: true, battle });
+});
+
+// 대결 삭제 (admin용) - 완료된 대결이면 승패/레이팅 되돌리기
+app.delete('/rating/battle/:id', (req, res) => {
+  const db = ensureBattles(getRatingDB());
+  const battle = db.battles.find((b: any) => b.id === req.params.id);
+  if (!battle) return res.status(404).json({ success: false, message: '대결 없음' });
+
+  // 완료된 대결이면 승패/레이팅 원복
+  if (battle.status === 'completed' && battle.winnerId && battle.loserId) {
+    const winner = db.characters.find((c: any) => c.id === battle.winnerId);
+    const loser  = db.characters.find((c: any) => c.id === battle.loserId);
+    if (winner) { winner.wins = Math.max(0, winner.wins - 1); winner.rating = Math.max(0, winner.rating - battle.ratingChange); }
+    if (loser)  { loser.losses = Math.max(0, loser.losses - 1); loser.rating += battle.ratingChange; }
+  }
+
+  // 삭제 기록 별도 저장
+  appendBattleLog({
+    type: 'deleted',
+    battleId: battle.id,
+    league: battle.league,
+    challengerName: battle.challengerName, challengerMember: battle.challengerMember,
+    defenderName: battle.defenderName,     defenderMember: battle.defenderMember,
+    originalStatus: battle.status,
+    winnerId: battle.winnerId || null,
+    winnerName: battle.winnerId === battle.challengerId ? battle.challengerName : battle.winnerId === battle.defenderId ? battle.defenderName : null,
+    ratingChange: battle.ratingChange,
+    deletedAt: new Date().toISOString()
+  });
+
+  db.battles = db.battles.filter((b: any) => b.id !== req.params.id);
+  saveRatingDB(db);
+  io.emit('ratingUpdate', db);
+  res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 4000;
