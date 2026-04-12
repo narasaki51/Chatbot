@@ -1791,9 +1791,10 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRating, setEditRating] = useState('');
   const [challengeTargetId, setChallengeTargetId] = useState<string | null>(null);
+  const [battleListOpen, setBattleListOpen] = useState(true);
   const [submittingBattleId, setSubmittingBattleId] = useState<string | null>(null);
 
-  const API = 'http://localhost:4000';
+  const API = SOCKET_URL;
 
   const fetchRating = async () => {
     const res = await fetch(`${API}/rating`);
@@ -2066,8 +2067,15 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
       {/* 대결 목록 */}
       {leagueBattles.length > 0 && (
         <div style={{ marginTop: '32px' }}>
-          <h3 style={{ color: '#888', fontWeight: 900, fontSize: '1rem', margin: '0 0 12px', letterSpacing: '0.5px' }}>⚔️ 대결 현황</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div
+            onClick={() => setBattleListOpen(o => !o)}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', cursor: 'pointer', userSelect: 'none', padding: '10px 14px', borderRadius: '10px', background: '#111', border: '1px solid #2a2a2a' }}
+          >
+            <span style={{ color: '#e2e8f0', fontWeight: 900, fontSize: '1rem', letterSpacing: '0.5px' }}>⚔️ 대결 현황</span>
+            <span style={{ fontSize: '0.8rem', color: '#a78bfa', background: '#1e1030', border: '1px solid #4c1d95', borderRadius: '20px', padding: '2px 10px', fontWeight: 700 }}>{leagueBattles.length}건</span>
+            <span style={{ marginLeft: 'auto', fontSize: '1rem', color: '#a78bfa', fontWeight: 900, transition: 'transform 0.2s', display: 'inline-block', transform: battleListOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+          </div>
+          {battleListOpen && <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {leagueBattles.map(b => {
               const isPending   = b.status === 'pending';
               const isAccepted  = b.status === 'accepted';
@@ -2117,13 +2125,13 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                     })()}
                     {/* 삭제 - admin만 */}
                     {isAdmin && (
-                      <button onClick={() => handleBattleDelete(b.id)} style={{ background: 'transparent', color: '#333', border: '1px solid #222', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑</button>
+                      <button onClick={() => handleBattleDelete(b.id)} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>🗑 삭제</button>
                     )}
                   </div>
                 </div>
               );
             })}
-          </div>
+          </div>}
         </div>
       )}
 
