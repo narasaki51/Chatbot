@@ -162,3 +162,17 @@ body.overlay-mode {
   height: 100%;
   background: var(--primary-color);
 }
+
+
+/* 연승 5+ 불꽃 효과 */
+@keyframes fireGlow {
+  0%   { box-shadow: 0 0 8px 2px #ff6a00, 0 0 20px 4px #ff4500aa, 0 0 40px 8px #ff000055; border-color: #ff6a00; }
+  50%  { box-shadow: 0 0 14px 4px #ffae00, 0 0 30px 8px #ff6a00aa, 0 0 55px 12px #ff450077; border-color: #ffae00; }
+  100% { box-shadow: 0 0 8px 2px #ff6a00, 0 0 20px 4px #ff4500aa, 0 0 40px 8px #ff000055; border-color: #ff6a00; }
+}
+
+.fire-streak {
+  animation: fireGlow 1.4s ease-in-out infinite;
+  border-color: #ff6a00 !important;
+  background: linear-gradient(135deg, #1a0800 0%, #0d0400 100%) !important;
+}

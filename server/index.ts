@@ -480,7 +480,7 @@ if (!fs.existsSync(RATING_DB_PATH)) fs.writeFileSync(RATING_DB_PATH, JSON.string
 const getRatingDB = () => JSON.parse(fs.readFileSync(RATING_DB_PATH, 'utf-8'));
 const saveRatingDB = (data: any) => fs.writeFileSync(RATING_DB_PATH, JSON.stringify(data, null, 2));
 
-// 기존 캐릭터 마이그레이션: score 없으면 rating값을 score로, rating은 1000으로 초기화
+// 기존 캐릭터 마이그레이션: score 없으면 rating값을 score로, rating은 1000으로 초기화 / winStreak 없으면 0으로 초기화
 (() => {
   const db = getRatingDB();
   let changed = false;
@@ -488,6 +488,10 @@ const saveRatingDB = (data: any) => fs.writeFileSync(RATING_DB_PATH, JSON.string
     if (c.score === undefined) {
       c.score = c.rating;
       c.rating = 1000;
+      changed = true;
+    }
+    if (c.winStreak === undefined) {
+      c.winStreak = 0;
       changed = true;
     }
   });
@@ -522,10 +526,20 @@ app.post('/rating/register', (req, res) => {
     rating: 1000,                  // 대결 레이팅 (1000 시작)
     wins: 0,
     losses: 0,
+    winStreak: 0,
     registeredAt: new Date().toISOString()
   };
   db.characters.push(newChar);
   saveRatingDB(db);
+  appendBattleLog({
+    type: 'register',
+    characterId: newChar.id,
+    memberName: newChar.memberName,
+    characterName: newChar.characterName,
+    league: newChar.league,
+    score: newChar.score,
+    registeredAt: newChar.registeredAt
+  });
   io.emit('ratingUpdate', db);
   res.json({ success: true, character: newChar });
 });
@@ -533,8 +547,23 @@ app.post('/rating/register', (req, res) => {
 // 캐릭터 삭제
 app.delete('/rating/:id', (req, res) => {
   const db = getRatingDB();
+  const target = db.characters.find((c: any) => c.id === req.params.id);
   db.characters = db.characters.filter((c: any) => c.id !== req.params.id);
   saveRatingDB(db);
+  if (target) {
+    appendBattleLog({
+      type: 'unregister',
+      characterId: target.id,
+      memberName: target.memberName,
+      characterName: target.characterName,
+      league: target.league,
+      score: target.score,
+      rating: target.rating,
+      wins: target.wins,
+      losses: target.losses,
+      deletedAt: new Date().toISOString()
+    });
+  }
   io.emit('ratingUpdate', db);
   res.json({ success: true });
 });
@@ -636,10 +665,12 @@ app.patch('/rating/battle/:id', (req, res) => {
     const loser  = db.characters.find((c: any) => c.id === loserId);
     if (!winner || !loser) return res.status(404).json({ success: false, message: '캐릭터 없음' });
 
-    winner.wins   += 1;
-    winner.rating += battle.ratingChange;
-    loser.losses  += 1;
-    loser.rating   = Math.max(0, loser.rating - battle.ratingChange);
+    winner.wins      += 1;
+    winner.rating    += battle.ratingChange;
+    winner.winStreak  = (winner.winStreak || 0) + 1;
+    loser.losses     += 1;
+    loser.rating      = Math.max(0, loser.rating - battle.ratingChange);
+    loser.winStreak   = 0;
 
     battle.status   = 'completed';
     battle.winnerId = winnerId;

@@ -1768,6 +1768,7 @@ interface RatingCharacter {
   rating: number;  // 대결로 변동되는 레이팅 (1000 시작)
   wins: number;
   losses: number;
+  winStreak: number;
   registeredAt: string;
 }
 
@@ -1963,8 +1964,9 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
           {leagueChars.map((char, idx) => {
             const rank = idx + 1;
             const winRate = char.wins + char.losses > 0 ? Math.round(char.wins / (char.wins + char.losses) * 100) : 0;
+            const isOnFire = (char.winStreak || 0) >= 5;
             return (
-              <div key={char.id} style={{
+              <div key={char.id} className={isOnFire ? 'fire-streak' : ''} style={{
                 background: rank === 1 ? `${cfg.bg}, linear-gradient(90deg, ${cfg.color}11 0%, transparent 100%)` : '#0d0d0d',
                 border: `1px solid ${rank <= 3 ? cfg.color + '44' : '#1a1a1a'}`,
                 borderRadius: '12px', padding: '16px 20px',
@@ -1979,12 +1981,18 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                     <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#fff' }}>{char.characterName}</span>
+                    {isOnFire && (
+                      <span title={`${char.winStreak}연승 중!`} style={{ fontSize: '1.1rem', lineHeight: 1, filter: 'drop-shadow(0 0 6px #ff6a00)' }}>
+                        {'🔥'.repeat(Math.min(Math.floor((char.winStreak || 0) / 5), 3))}
+                      </span>
+                    )}
                     <span style={{ fontSize: '0.78rem', color: '#666', background: '#1a1a1a', padding: '2px 8px', borderRadius: '20px' }}>{char.memberName}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: '#666' }}>
                     <span style={{ color: '#4ade80' }}>▲ {char.wins}승</span>
                     <span style={{ color: '#f87171' }}>▼ {char.losses}패</span>
                     <span>승률 {winRate}%</span>
+                    {isOnFire && <span style={{ color: '#ff6a00', fontWeight: 900 }}>🔥 {char.winStreak}연승</span>}
                   </div>
                 </div>
                 {/* 점수(고정) + 레이팅 */}
