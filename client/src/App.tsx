@@ -3179,8 +3179,8 @@ const MissionBoardOverlay: React.FC = () => {
                   </div>
                 )}
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: 900, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isLadder ? '#ffbd2e' : 'white', lineHeight: 1.2 }}>
-                    {contentFixed}
+                  <span style={{ fontWeight: 900, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+                    {highlightMissionText(contentFixed, isLadder ? '#ffbd2e' : 'white')}
                   </span>
                   <span style={{ fontSize: '0.85rem', color: isLadder ? '#ffbd2e88' : '#00ffa388', fontWeight: 600 }}>
                     @{mission.creator}{count > 1 ? ` 외 ${count - 1}명` : ''}
@@ -3269,8 +3269,8 @@ const RogadaBoardOverlay: React.FC = () => {
                   </div>
                 )}
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: 900, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white', lineHeight: 1.2 }}>
-                    {mission.content}
+                  <span style={{ fontWeight: 900, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+                    {highlightMissionText(mission.content, 'white')}
                   </span>
                   <span style={{ fontSize: '0.85rem', color: '#00ffa388', fontWeight: 600 }}>
                     @{mission.creator}
