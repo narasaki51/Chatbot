@@ -355,6 +355,18 @@ app.patch('/missions/:id', (req, res) => {
   const m = missions.find((o: any) => o.id === req.params.id);
   if (m) {
     Object.assign(m, req.body);
+
+    // main 미션 상태 변경 시 연결된 rogada(찌모) 미션도 동기화
+    if (m.type === 'main') {
+      const paired = missions.find((o: any) =>
+        o.type === 'rogada' && o.target === '찌모' && o.content === m.content && o.creator === m.creator
+      );
+      if (paired) {
+        Object.assign(paired, req.body);
+        io.emit('updateMission', paired);
+      }
+    }
+
     saveMissions(missions);
     io.emit('updateMission', m);
   }
@@ -362,9 +374,20 @@ app.patch('/missions/:id', (req, res) => {
 });
 
 app.delete('/missions/:id', (req, res) => {
-  let missions = getMissions().filter((m: any) => m.id !== req.params.id);
-  saveMissions(missions);
-  io.emit('missionDeleted', req.params.id);
+  const allMissions = getMissions();
+  const target = allMissions.find((m: any) => m.id === req.params.id);
+
+  // main 미션 삭제 시 같은 내용의 rogada(찌모) 미션도 함께 삭제
+  const toDeleteIds: string[] = [req.params.id];
+  if (target && target.type === 'main') {
+    const paired = allMissions.find((m: any) =>
+      m.type === 'rogada' && m.target === '찌모' && m.content === target.content && m.creator === target.creator
+    );
+    if (paired) toDeleteIds.push(paired.id);
+  }
+
+  saveMissions(allMissions.filter((m: any) => !toDeleteIds.includes(m.id)));
+  toDeleteIds.forEach(id => io.emit('missionDeleted', id));
   res.status(204).send();
 });
 

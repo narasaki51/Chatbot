@@ -418,7 +418,7 @@ const highlightMissionText = (text: string, baseColor: string) => {
   );
 };
 
-const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, onGoLadder: () => void, isBlind?: boolean, canUseLadder?: boolean }> = ({ mission, count = 1, onUpdate, onDelete, onGoLadder, isBlind = false, canUseLadder = true }) => {
+const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: string, s: string) => void, onDelete: (id: string) => void, onGoLadder: () => void, isBlind?: boolean, canUseLadder?: boolean, canInteract?: boolean }> = ({ mission, count = 1, onUpdate, onDelete, onGoLadder, isBlind = false, canUseLadder = true, canInteract = true }) => {
   const [effect, setEffect] = useState<string | null>(null);
   const triggerAction = (status: string) => {
     setEffect(status);
@@ -474,8 +474,8 @@ const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: strin
         </div>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexShrink: 0, marginLeft: '10px', minWidth: mission.status === 'accepted' && isLadder ? '230px' : '150px', justifyContent: 'flex-end' }}>
-        {mission.status === 'pending' ? (<><button onClick={() => triggerAction('accepted')} style={{ cursor: 'pointer', background: '#00ffa3', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'black', fontSize: '0.8rem' }}>수락</button><button onClick={() => triggerAction('rejected')} style={{ cursor: 'pointer', background: '#222', border: '1px solid #ff4b4b', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: '#ff4b4b', fontSize: '0.8rem' }}>거절</button></>) :
-          (<>{isLadder && <button onClick={() => { if (canUseLadder) { onGoLadder(); setTimeout(() => onDelete(mission.id), 100); } }} style={{ cursor: canUseLadder ? 'pointer' : 'not-allowed', background: canUseLadder ? '#ffbd2e' : '#2a2a2a', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canUseLadder ? 'black' : '#555', fontSize: '0.8rem', display: 'flex', gap: '5px', opacity: canUseLadder ? 1 : 0.5 }}>사다리 <Sparkles size={14} /></button>}<button onClick={() => triggerAction('success')} style={{ cursor: 'pointer', background: 'white', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'black', fontSize: '0.8rem' }}>성공</button><button onClick={() => triggerAction('failure')} style={{ cursor: 'pointer', background: '#ff4b4b', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: 'white', fontSize: '0.8rem' }}>실패</button></>)}
+        {mission.status === 'pending' ? (<><button onClick={() => canInteract && triggerAction('accepted')} style={{ cursor: canInteract ? 'pointer' : 'not-allowed', background: canInteract ? '#00ffa3' : '#1a1a1a', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canInteract ? 'black' : '#444', fontSize: '0.8rem', opacity: canInteract ? 1 : 0.4 }}>수락</button><button onClick={() => canInteract && triggerAction('rejected')} style={{ cursor: canInteract ? 'pointer' : 'not-allowed', background: '#222', border: `1px solid ${canInteract ? '#ff4b4b' : '#333'}`, padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canInteract ? '#ff4b4b' : '#444', fontSize: '0.8rem', opacity: canInteract ? 1 : 0.4 }}>거절</button></>) :
+          (<>{isLadder && <button onClick={() => { if (canUseLadder && canInteract) { onGoLadder(); setTimeout(() => onDelete(mission.id), 100); } }} style={{ cursor: canUseLadder && canInteract ? 'pointer' : 'not-allowed', background: canUseLadder && canInteract ? '#ffbd2e' : '#2a2a2a', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canUseLadder && canInteract ? 'black' : '#555', fontSize: '0.8rem', display: 'flex', gap: '5px', opacity: canUseLadder && canInteract ? 1 : 0.5 }}>사다리 <Sparkles size={14} /></button>}<button onClick={() => canInteract && triggerAction('success')} style={{ cursor: canInteract ? 'pointer' : 'not-allowed', background: canInteract ? 'white' : '#1a1a1a', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canInteract ? 'black' : '#444', fontSize: '0.8rem', opacity: canInteract ? 1 : 0.4 }}>성공</button><button onClick={() => canInteract && triggerAction('failure')} style={{ cursor: canInteract ? 'pointer' : 'not-allowed', background: canInteract ? '#ff4b4b' : '#1a1a1a', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 900, color: canInteract ? 'white' : '#444', fontSize: '0.8rem', opacity: canInteract ? 1 : 0.4 }}>실패</button></>)}
       </div>
     </motion.div>
   );
@@ -746,7 +746,8 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
                   ) : memberMissions.map(m => (
                     <MissionCard key={m.id} mission={m} onUpdate={onUpdate} onDelete={onDelete} onGoLadder={() => console.log('사다리 이동 클릭됨')}
                       isBlind={!!m.private && user.name !== cleanName && user.role !== 'admin'}
-                      canUseLadder={user.role === 'admin' || user.role === 'host'} />
+                      canUseLadder={user.role === 'admin' || user.role === 'host'}
+                      canInteract={user.role === 'admin' || user.role === 'host' || user.name === cleanName} />
                   ))}
                 </AnimatePresence>
               </div>
@@ -3211,7 +3212,7 @@ const RogadaBoardOverlay: React.FC = () => {
       setMissions(p => [...p, m]);
     };
     const handleUpdate = (m: any) => {
-      if (m.status === 'completed') {
+      if (m.status === 'completed' || m.status === 'rejected') {
         setMissions(p => p.filter(o => String(o.id) !== String(m.id)));
       } else {
         setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
