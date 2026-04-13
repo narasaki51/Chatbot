@@ -495,22 +495,22 @@ const AllResultsModal: React.FC<{ results: { name: string, result: string, color
   };
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '30px 40px', borderRadius: '30px', border: '4px solid #00ffa3', textAlign: 'center', boxShadow: '0 0 50px rgba(0,255,163,0.3)', minWidth: '340px', maxWidth: '90vw' }}>
-        <PartyPopper size={40} color="#00ffa3" style={{ marginBottom: '12px' }} />
-        <div style={{ fontSize: '1.2rem', color: '#00ffa3', fontWeight: 900, marginBottom: '8px' }}>⚡ 동시 진행 결과</div>
+      <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '42px 56px', borderRadius: '30px', border: '6px solid #00ffa3', textAlign: 'center', boxShadow: '0 0 70px rgba(0,255,163,0.3)', minWidth: '476px', maxWidth: '90vw' }}>
+        <PartyPopper size={56} color="#00ffa3" style={{ marginBottom: '17px' }} />
+        <div style={{ fontSize: '1.7rem', color: '#00ffa3', fontWeight: 900, marginBottom: '11px' }}>⚡ 동시 진행 결과</div>
         {total > 0 && (
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '1.5rem', color: '#ffbd2e', fontWeight: 900 }}>{total.toLocaleString()}</div>
-            <div style={{ fontSize: '0.85rem', color: remaining <= 0 ? '#ff4d4d' : '#888', marginTop: '4px', fontWeight: 700 }}>
+          <div style={{ marginBottom: '22px' }}>
+            <div style={{ fontSize: '2.1rem', color: '#ffbd2e', fontWeight: 900 }}>{total.toLocaleString()}</div>
+            <div style={{ fontSize: '1.2rem', color: remaining <= 0 ? '#ff4d4d' : '#888', marginTop: '6px', fontWeight: 700 }}>
               남은 금액: {remaining.toLocaleString()}
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {sorted.map((r, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#111', borderRadius: '10px', padding: '10px 16px', border: `2px solid ${r.color}44` }}>
-              <span style={{ color: r.color, fontWeight: 900, fontSize: '1.1rem', minWidth: '24px', textAlign: 'center' }}>{r.result}</span>
-              <span style={{ color: 'white', fontWeight: 900, fontSize: '1rem', flex: 1, textAlign: 'left' }}>{r.name}</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '17px', background: '#111', borderRadius: '11px', padding: '14px 22px', border: `3px solid ${r.color}44` }}>
+              <span style={{ color: r.color, fontWeight: 900, fontSize: '1.55rem', minWidth: '34px', textAlign: 'center' }}>{r.result}</span>
+              <span style={{ color: 'white', fontWeight: 900, fontSize: '1.4rem', flex: 1, textAlign: 'left' }}>{r.name}</span>
               {total > 0 && (
                 <input
                   type="text"
@@ -518,13 +518,13 @@ const AllResultsModal: React.FC<{ results: { name: string, result: string, color
                   disabled={remaining <= 0 && !payments[i]}
                   onChange={e => setPayment(i, e.target.value)}
                   placeholder=""
-                  style={{ width: '90px', background: '#000', border: `1px solid ${r.color}66`, color: r.color, borderRadius: '6px', padding: '5px 8px', textAlign: 'center', fontWeight: 900, fontSize: '0.85rem', opacity: remaining <= 0 && !payments[i] ? 0.4 : 1 }}
+                  style={{ width: '126px', background: '#000', border: `2px solid ${r.color}66`, color: r.color, borderRadius: '7px', padding: '7px 11px', textAlign: 'center', fontWeight: 900, fontSize: '1.2rem', opacity: remaining <= 0 && !payments[i] ? 0.4 : 1 }}
                 />
               )}
             </div>
           ))}
         </div>
-        <button style={{ cursor: 'pointer', marginTop: '25px', background: '#00ffa3', color: '#000', border: 'none', padding: '12px 40px', borderRadius: '10px', fontWeight: 900 }} onClick={onClose}>확인 완료</button>
+        <button style={{ cursor: 'pointer', marginTop: '35px', background: '#00ffa3', color: '#000', border: 'none', padding: '17px 56px', borderRadius: '11px', fontWeight: 900, fontSize: '1rem' }} onClick={onClose}>확인 완료</button>
       </motion.div>
     </motion.div>
   );
@@ -537,7 +537,7 @@ const LadderGame: React.FC = () => {
   const [ends, setEnds] = useState<string[]>(Array(12).fill(''));
   const [bridges, setBridges] = useState<{ row: number, col: number }[]>([]);
   const [activePaths, setActivePaths] = useState<{ id: number, points: { x: number, y: number }[], color: string }[]>([]);
-  const [isBlind, setIsBlind] = useState(false);
+  const [isBlind, setIsBlind] = useState(true);
   const [isUiri, setIsUiri] = useState(false);
   const [uiriAmount, setUiriAmount] = useState('');
   const [showResult, setShowResult] = useState<{ name: string, result: string } | null>(null);
@@ -578,13 +578,13 @@ const LadderGame: React.FC = () => {
           {isBlind ? <EyeOff size={16} /> : <Eye size={16} />} BLIND PROGRESS
         </button>
       </div>
-      <AnimatePresence>{showResult && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '30px 50px', borderRadius: '30px', border: '4px solid #ffbd2e', textAlign: 'center', boxShadow: '0 0 50px rgba(255, 189, 46, 0.3)' }}><PartyPopper size={50} color="#ffbd2e" style={{ marginBottom: '15px' }} /><div style={{ fontSize: '1.8rem', color: 'white', fontWeight: 900 }}>{showResult.name}</div><div style={{ fontSize: '2rem', color: '#ffbd2e', fontWeight: 900, marginTop: '10px' }}>{showResult.result}</div><button style={{ cursor: 'pointer', marginTop: '25px', background: '#ffbd2e', border: 'none', padding: '12px 40px', borderRadius: '10px', fontWeight: 900 }} onClick={() => setShowResult(null)}>확인 완료</button></motion.div></motion.div>)}</AnimatePresence>
+      <AnimatePresence>{showResult && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '60px 100px', borderRadius: '40px', border: '8px solid #ffbd2e', textAlign: 'center', boxShadow: '0 0 100px rgba(255, 189, 46, 0.3)' }}><PartyPopper size={100} color="#ffbd2e" style={{ marginBottom: '30px' }} /><div style={{ fontSize: '3.6rem', color: 'white', fontWeight: 900 }}>{showResult.name}</div><div style={{ fontSize: '4rem', color: '#ffbd2e', fontWeight: 900, marginTop: '20px' }}>{showResult.result}</div><button style={{ cursor: 'pointer', marginTop: '50px', background: '#ffbd2e', border: 'none', padding: '24px 80px', borderRadius: '15px', fontWeight: 900, fontSize: '1.2rem' }} onClick={() => setShowResult(null)}>확인 완료</button></motion.div></motion.div>)}</AnimatePresence>
       <AnimatePresence>{showAllResults && <AllResultsModal results={showAllResults} totalAmount={uiriAmount} onClose={() => setShowAllResults(null)} />}</AnimatePresence>
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', background: '#020202', border: '1px solid #111', borderRadius: '15px', position: 'relative', padding: '40px 0' }}>
         <svg viewBox={`-120 -80 ${WIDTH + 240} ${HEIGHT + 350}`} style={{ width: '1000px', height: 'auto', margin: '0 auto', display: 'block', overflow: 'visible' }}>
-          {Array.from({ length: count }).map((_, i) => (<g key={i}><line x1={(i / (count - 1)) * WIDTH} y1="0" x2={(i / (count - 1)) * WIDTH} y2={HEIGHT} stroke="#222" strokeWidth="6" strokeLinecap="round" /><circle cx={(i / (count - 1)) * WIDTH} cy="0" r="6" fill="#ffbd2e" /><circle cx={(i / (count - 1)) * WIDTH} cy={HEIGHT} r="6" fill="#ffbd2e" /></g>))}
-          {!isBlind && bridges.map((b, i) => (<line key={i} x1={(b.col / (count - 1)) * WIDTH} y1={(b.row / ROW_COUNT) * HEIGHT} x2={((b.col + 1) / (count - 1)) * WIDTH} y2={(b.row / ROW_COUNT) * HEIGHT} stroke="#ffbd2e44" strokeWidth="4" strokeLinecap="round" />))}
-          {!isBlind && activePaths.map((p) => (<motion.polyline key={p.id} points={p.points.map(pt => `${pt.x},${pt.y}`).join(' ')} fill="none" stroke={p.color} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 3.5, ease: "easeInOut" }} />))}
+          {Array.from({ length: count }).map((_, i) => (<g key={i}><line x1={(i / (count - 1)) * WIDTH} y1="0" x2={(i / (count - 1)) * WIDTH} y2={HEIGHT} stroke="#222" strokeWidth="9" strokeLinecap="round" /><circle cx={(i / (count - 1)) * WIDTH} cy="0" r="9" fill="#ffbd2e" /><circle cx={(i / (count - 1)) * WIDTH} cy={HEIGHT} r="9" fill="#ffbd2e" /></g>))}
+          {!isBlind && bridges.map((b, i) => (<line key={i} x1={(b.col / (count - 1)) * WIDTH} y1={(b.row / ROW_COUNT) * HEIGHT} x2={((b.col + 1) / (count - 1)) * WIDTH} y2={(b.row / ROW_COUNT) * HEIGHT} stroke="#ffbd2e66" strokeWidth="7" strokeLinecap="round" />))}
+          {!isBlind && activePaths.map((p) => (<motion.polyline key={p.id} points={p.points.map(pt => `${pt.x},${pt.y}`).join(' ')} fill="none" stroke={p.color} strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 3.5, ease: "easeInOut" }} />))}
           {Array.from({ length: count }).map((_, i) => (<foreignObject key={i} x={(i / (count - 1)) * WIDTH - 85} y="-95" width="170" height="85"><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}><div style={{ display: 'flex', alignItems: 'center', background: '#000', border: '2px solid #ffbd2e', padding: '4px', borderRadius: '8px' }}><input placeholder="이름" value={starts[i]} onChange={e => { const n = [...starts]; n[i] = e.target.value; setStarts(n); }} style={{ width: '100px', background: 'none', color: 'white', border: 'none', textAlign: 'center', fontWeight: 800 }} /><button onClick={() => runPath(i)} style={{ cursor: 'pointer', background: '#ffbd2e', border: 'none', width: '30px', borderRadius: '5px', height: '30px', fontWeight: 900 }}>▶</button></div></div></foreignObject>))}
           {Array.from({ length: count }).map((_, i) => (<foreignObject key={i} x={(i / (count - 1)) * WIDTH - 80} y={HEIGHT + 25} width="160" height="70"><div style={{ textAlign: 'center' }}><input placeholder="결과" value={ends[i]} readOnly={isUiri} onChange={e => { if (isUiri) return; const n = [...ends]; n[i] = e.target.value; setEnds(n); }} style={{ width: '150px', background: '#000', border: `2px solid ${isUiri ? '#00ffa344' : '#222'}`, color: '#ffbd2e', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '1rem', fontWeight: 800, opacity: isUiri ? 0.7 : 1 }} /></div></foreignObject>))}
         </svg>
