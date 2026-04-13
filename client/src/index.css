@@ -29,6 +29,7 @@ body:not(.overlay-mode) {
 }
 
 /* OBS 오버레이 모드 — 배경 완전 투명 */
+html:has(body.overlay-mode),
 body.overlay-mode {
   background: transparent !important;
   background-color: transparent !important;

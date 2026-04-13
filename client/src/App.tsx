@@ -54,7 +54,7 @@ const AppMain: React.FC = () => {
     } catch {}
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette'>('dashboard');
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
@@ -173,11 +173,11 @@ const AppMain: React.FC = () => {
   }
 
   // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정 (사다리/룰렛은 허용)
-  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating') {
+  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette') {
     setView('group');
   }
   // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정 (사다리 허용)
-  if (user.role === 'guest' && view !== 'roulette' && view !== 'ladder') {
+  if (user.role === 'guest' && view !== 'roulette' && view !== 'ladder' && view !== 'pok_roulette') {
     setView('roulette');
   }
 
@@ -195,6 +195,9 @@ const AppMain: React.FC = () => {
             <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+            {user.name === '폭병' && (
+              <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
+            )}
           </div>
         )}
 
@@ -202,6 +205,9 @@ const AppMain: React.FC = () => {
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+            {user.name === '폭병' && (
+              <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
+            )}
           </div>
         )}
 
@@ -213,6 +219,9 @@ const AppMain: React.FC = () => {
             <div style={{ width: '1px', background: '#333', margin: '0 5px' }}></div>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+            {(user.name === '폭병' || user.role === 'admin') && (
+              <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
+            )}
             <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
             <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
             <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
@@ -337,6 +346,8 @@ const AppMain: React.FC = () => {
           <PinballGame key="pinball-comp-last" />
         ) : view === 'rating' ? (
           <RatingBoard key="rating-comp-last" user={user!} />
+                      ) : view === 'pok_roulette' ? (
+                        <RouletteGame key="pok-roul-comp-last" user={user!} isPokMode={true} />
         ) : (
           <RouletteGame key="roul-comp-last" user={user!} />
         )}
@@ -1559,32 +1570,83 @@ const HamsterChatBot: React.FC = () => {
   );
 };
 
-const RouletteGame: React.FC<{ user: UserAuth }> = ({ user }) => {
+const RouletteGame: React.FC<{ user: UserAuth, isPokMode?: boolean }> = ({ user, isPokMode = false }) => {
   type RItem = { label: string; weight: number };
-  const STORAGE_KEY = `roulette_items_v2_${user.name}`;
+  const STORAGE_KEY = `roulette_items_v2_${user.name}${isPokMode ? '_pok' : ''}`;
   const colors = ['#ff2eb4', '#00ffa3', '#2e96ff', '#ff8e2e', '#b42eff', '#ff4b4b', '#ffff00'];
 
-  const defaultItems: RItem[] = ['치킨', '피자', '꽝', '별풍선', '애교', '랜덤박스', '벌칙'].map(l => ({ label: l, weight: 1 }));
+  const defaultItems: RItem[] = isPokMode
+    ? ['가나', '기공', '슬레', '건슬', '발키리', '바드'].map(l => ({ label: l, weight: 1 }))
+    : ['치킨', '피자', '꽝', '별풍선', '애교', '랜덤박스', '벌칙'].map(l => ({ label: l, weight: 1 }));
+  const defaultItems2: RItem[] = ['4막', '종막', '세르카', '종탑'].map(l => ({ label: l, weight: 1 }));
 
-  const [items, setItems] = useState<RItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved) as RItem[];
-    } catch {}
-    return defaultItems;
-  });
+  const [items, setItems] = useState<RItem[]>(defaultItems);
+  const [personPools, setPersonPools] = useState<Record<string, RItem[]>>({});
+  const [items2, setItems2] = useState<RItem[]>(defaultItems2);
+  const [isLoaded, setIsLoaded] = useState(false);
+
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const [rotation2, setRotation2] = useState(0);
   const [winner, setWinner] = useState<string | null>(null);
+  const [winner2, setWinner2] = useState<string | null>(null);
   const [newItem, setNewItem] = useState('');
   const [arrowWiggle, setArrowWiggle] = useState(0);
+  const [arrowWiggle2, setArrowWiggle2] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const lastTickCount = useRef(0);
+  const lastTickCount2 = useRef(0);
   const tensionRef = useRef(0);
+  const tensionRef2 = useRef(0);
+  const isPok = isPokMode;
+
+  const itemsRef = useRef<RItem[]>(items);
+  const items2Ref = useRef<RItem[]>(items2);
+  const personPoolsRef = useRef<Record<string, RItem[]>>(personPools);
+
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => { items2Ref.current = items2; }, [items2]);
+  useEffect(() => { personPoolsRef.current = personPools; }, [personPools]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items, STORAGE_KEY]);
+    if (isPokMode) {
+      fetch(`${SOCKET_URL}/pok-roulette-state`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.items1 && data.items1.length > 0) setItems(data.items1);
+          if (data.personPools) setPersonPools(data.personPools);
+          setIsLoaded(true);
+        })
+        .catch(() => setIsLoaded(true));
+    } else {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) setItems(JSON.parse(saved));
+      } catch { }
+      setIsLoaded(true);
+    }
+  }, [isPokMode, SOCKET_URL, STORAGE_KEY]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (isPokMode) {
+      fetch(`${SOCKET_URL}/pok-roulette-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items1: items, personPools })
+      });
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+  }, [items, personPools, isLoaded, isPokMode, SOCKET_URL, STORAGE_KEY]);
+
+  // items2(휠 표시용) 동기화 - personPools 로드 또는 winner 변경 시 대응
+  useEffect(() => {
+    if (isPok) {
+      const pool = winner ? (personPools[winner] || defaultItems2) : defaultItems2;
+      setItems2(pool);
+    }
+  }, [personPools, winner, isPok]);
 
   // "내용x숫자" 파싱 → { label, weight }
   const parseRaw = (raw: string): RItem => {
@@ -1637,38 +1699,123 @@ const RouletteGame: React.FC<{ user: UserAuth }> = ({ user }) => {
     });
   })();
 
+  const totalWeight2 = items2.reduce((s, it) => s + it.weight, 0);
+  const slices2 = (() => {
+    let cum = 0;
+    return items2.map(it => {
+      const sweep = totalWeight2 > 0 ? (it.weight / totalWeight2) * 360 : 0;
+      const start = cum;
+      cum += sweep;
+      return { label: it.label, weight: it.weight, startDeg: start, sweepDeg: sweep };
+    });
+  })();
+
   const spinRoulette = () => {
     if (isSpinning || items.length === 0) return;
-    setIsSpinning(true); setWinner(null);
-    const finalTarget = rotation + (10 + Math.random() * 5) * 360 + Math.random() * 360;
-    const duration = 8500;
-    const baseRotation = rotation;
-    const tickStep = 360 / items.length;
-    lastTickCount.current = Math.floor((baseRotation + 0.5) / tickStep);
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 5);
-      const cur = baseRotation + (finalTarget - baseRotation) * easeOut;
-      setRotation(cur);
-      // 화살 흔들림
-      const tick = Math.floor((cur + 0.5) / tickStep);
-      if (tick > lastTickCount.current) { tensionRef.current = Math.min(50, tensionRef.current + 38); lastTickCount.current = tick; }
-      tensionRef.current *= 0.85;
-      if (tensionRef.current < 0.1) tensionRef.current = 0;
-      setArrowWiggle(-tensionRef.current);
-      if (progress < 1) { requestAnimationFrame(animate); }
-      else {
-        setTimeout(() => {
-          // 비율 기반 당첨 판정: 화살표가 가리키는 각도 → 어느 슬라이스?
+    setIsSpinning(true); setWinner(null); setWinner2(null);
+    const duration = isPok ? 5000 : 8500;
+
+    const spinTwo = (targetPool: RItem[], firstWinner: string) => {
+      const baseRotation2 = rotation2;
+      const finalTarget2 = baseRotation2 + (10 + Math.random() * 5) * 360 + Math.random() * 360;
+
+      let cum = 0;
+      const tWeight = targetPool.reduce((s, it) => s + it.weight, 0);
+      const tempSlices2 = targetPool.map(it => {
+        const sweep = tWeight > 0 ? (it.weight / tWeight) * 360 : 0;
+        const start = cum; cum += sweep;
+        return { label: it.label, weight: it.weight, startDeg: start, sweepDeg: sweep };
+      });
+
+      const tickStep2 = 360 / Math.max(1, targetPool.length);
+      const start = Date.now();
+      lastTickCount2.current = Math.floor((baseRotation2 + 0.5) / tickStep2);
+
+      const animate2 = () => {
+        const elapsed = Date.now() - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 5);
+        const cur2 = baseRotation2 + (finalTarget2 - baseRotation2) * easeOut;
+        setRotation2(cur2);
+
+        const tick2 = Math.floor((cur2 + 0.5) / tickStep2);
+        if (tick2 > lastTickCount2.current) { tensionRef2.current = Math.min(50, tensionRef2.current + 38); lastTickCount2.current = tick2; }
+        tensionRef2.current *= 0.85;
+        if (tensionRef2.current < 0.1) tensionRef2.current = 0;
+        setArrowWiggle2(-tensionRef2.current);
+
+        if (progress < 1) {
+          requestAnimationFrame(animate2);
+        } else {
+          const effective2 = ((360 - (cur2 % 360)) + 360) % 360;
+          const hit2 = tempSlices2.find(s => effective2 >= s.startDeg && effective2 < s.startDeg + s.sweepDeg) ?? tempSlices2[0];
+          const secondWinner = hit2.label;
+          setWinner2(secondWinner);
+          setIsSpinning(false);
+
+          if (isPok) {
+            setPersonPools(prev => {
+              const currentPool = prev[firstWinner] || defaultItems2;
+              const nextPool = currentPool.filter(it => it.label.trim() !== secondWinner.trim());
+              if (nextPool.length === 0) {
+                setItems(p1 => p1.filter(it => it.label.trim() !== firstWinner.trim()));
+                const nextPersonPools = { ...prev };
+                delete nextPersonPools[firstWinner];
+                return nextPersonPools;
+              } else {
+                return { ...prev, [firstWinner]: nextPool };
+              }
+            });
+          }
+        }
+      };
+      requestAnimationFrame(animate2);
+    };
+
+    // spinOne 내부 finish 로직 수정
+    const spinOne = () => {
+      const baseRotation = rotation;
+      const finalTarget = baseRotation + (10 + Math.random() * 5) * 360 + Math.random() * 360;
+      const tickStep = 360 / Math.max(1, items.length);
+      const start = Date.now();
+      lastTickCount.current = Math.floor((baseRotation + 0.5) / tickStep);
+
+      const animate1 = () => {
+        const elapsed = Date.now() - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 5);
+        const cur = baseRotation + (finalTarget - baseRotation) * easeOut;
+        setRotation(cur);
+
+        const tick = Math.floor((cur + 0.5) / tickStep);
+        if (tick > lastTickCount.current) {
+          tensionRef.current = Math.min(50, tensionRef.current + 38);
+          lastTickCount.current = tick;
+        }
+        tensionRef.current *= 0.85;
+        if (tensionRef.current < 0.1) tensionRef.current = 0;
+        setArrowWiggle(-tensionRef.current);
+
+        if (progress < 1) {
+          requestAnimationFrame(animate1);
+        } else {
           const effective = ((360 - (cur % 360)) + 360) % 360;
           const hit = slices.find(s => effective >= s.startDeg && effective < s.startDeg + s.sweepDeg) ?? slices[0];
-          setWinner(hit.label); setIsSpinning(false);
-        }, 500);
-      }
+          setWinner(hit.label);
+          if (isPok) {
+            // 당첨된 사람의 최신 풀을 즉시 가져와서 spinTwo에 전달
+            const latestPool = personPoolsRef.current[hit.label] || defaultItems2;
+            setItems2(latestPool);
+            setTimeout(() => spinTwo(latestPool, hit.label), 600);
+          } else {
+            setIsSpinning(false);
+          }
+        }
+      };
+      requestAnimationFrame(animate1);
     };
-    const startTime = Date.now();
-    requestAnimationFrame(animate);
+
+    spinOne();
   };
 
   // SVG arc path 헬퍼
@@ -1679,77 +1826,126 @@ const RouletteGame: React.FC<{ user: UserAuth }> = ({ user }) => {
     return `M ${cx} ${cy} L ${cx + r * Math.cos(s)} ${cy + r * Math.sin(s)} A ${r} ${r} 0 ${lg} 1 ${cx + r * Math.cos(e)} ${cy + r * Math.sin(e)} Z`;
   };
 
+  const renderWheel = (rot: number, wiggle: number, targetSlices: typeof slices) => (
+    <div style={{ position: 'relative', width: '560px', height: '560px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div animate={{ rotate: rot }} transition={{ duration: 0 }} style={{ width: '510px', height: '510px', position: 'relative' }}>
+        <svg viewBox="-45 -45 590 590" style={{ width: '590px', height: '590px', position: 'absolute', top: '-40px', left: '-40px', overflow: 'visible' }}>
+          <g id="pie-layer">
+            {targetSlices.map((s, i) => <path key={i} d={arcPath(250, 250, 250, s.startDeg, s.sweepDeg)} fill={colors[i % colors.length]} stroke="#000" strokeWidth="1" strokeOpacity="0.15" />)}
+          </g>
+          <g id="labels-layer">
+            {targetSlices.map((s, i) => {
+              const midDeg = s.startDeg + s.sweepDeg / 2;
+              const rad = (midDeg - 90) * Math.PI / 180;
+              const lx = 250 + 175 * Math.cos(rad), ly = 255 + 175 * Math.sin(rad);
+              const fontSize = s.sweepDeg < 15 ? 10 : s.sweepDeg < 25 ? 13 : 18;
+              return (
+                <text key={i} x={lx} y={ly} fill="white" fontSize={fontSize} fontWeight="900" textAnchor="middle" dominantBaseline="middle"
+                  transform={`rotate(${midDeg}, ${lx}, ${ly})`}>
+                  {s.label}{s.weight > 1 ? ` ×${s.weight}` : ''}
+                </text>
+              );
+            })}
+          </g>
+          <g id="pins-layer">
+            {targetSlices.map((s, i) => { const r = (s.startDeg + s.sweepDeg - 90) * Math.PI / 180; return <g key={i}><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="10" fill="#fff" filter="url(#p-shad-l)" /><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="6" fill="#ddd" /></g>; })}
+          </g>
+          <defs><filter id="p-shad-l"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.8" /></filter></defs>
+        </svg>
+      </motion.div>
+      <div style={{ position: 'absolute', top: '-28px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, pointerEvents: 'none' }}>
+        <motion.svg animate={{ rotate: wiggle }} transition={{ duration: 0 }} width="20" height="70" viewBox="0 0 20 70" style={{ overflow: 'visible', filter: 'drop-shadow(0 0 10px #ff2eb4)' }}>
+          <path d="M 10 70 L 4 35 L 10 0 L 16 35 Z" fill="#ff2eb4" stroke="white" strokeWidth="1" />
+          <circle cx="10" cy="35" r="2.5" fill="white" />
+        </motion.svg>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {user.role === 'guest' && (
+      {!isPok && (
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
           <button onClick={connectChat} disabled={isConnected} style={{ cursor: isConnected ? 'default' : 'pointer', background: isConnected ? '#111' : '#ffbd2e22', color: isConnected ? '#00ffa3' : '#ffbd2e', border: `1px solid ${isConnected ? '#00ffa3' : '#ffbd2e'}`, padding: '12px 30px', borderRadius: '15px', fontWeight: 900, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {isConnected ? '✅ 채팅 연결됨' : '+ 내 채널 채팅 연결 (도네이션 연동)'}
           </button>
         </div>
       )}
+
+      {/* 리셋 버튼 추가 */}
+      {isPok && (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button onClick={() => {
+            setItems(defaultItems);
+            setItems2(defaultItems2);
+            setPersonPools({});
+            setWinner(null);
+            setWinner2(null);
+            setRotation(0);
+            setRotation2(0);
+            fetch(`${SOCKET_URL}/pok-roulette-state`, { method: 'DELETE' });
+          }} style={{ background: '#333', color: 'white', padding: '10px 20px', borderRadius: '10px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>🔄 룰렛 초기화</button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '40px', justifyContent: 'center', padding: '10px 30px 30px 30px' }}>
         {/* 룰렛 휠 */}
-        <div style={{ position: 'relative', width: '560px', height: '560px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <motion.div animate={{ rotate: rotation }} transition={{ duration: 0 }} style={{ width: '510px', height: '510px', position: 'relative' }}>
-            <svg viewBox="-45 -45 590 590" style={{ width: '590px', height: '590px', position: 'absolute', top: '-40px', left: '-40px', overflow: 'visible' }}>
-              <g id="pie-layer">
-                {slices.map((s, i) => <path key={i} d={arcPath(250, 250, 250, s.startDeg, s.sweepDeg)} fill={colors[i % colors.length]} stroke="#000" strokeWidth="1" strokeOpacity="0.15" />)}
-              </g>
-              <g id="labels-layer">
-                {slices.map((s, i) => {
-                  const midDeg = s.startDeg + s.sweepDeg / 2;
-                  const rad = (midDeg - 90) * Math.PI / 180;
-                  const lx = 250 + 175 * Math.cos(rad), ly = 255 + 175 * Math.sin(rad);
-                  const fontSize = s.sweepDeg < 15 ? 10 : s.sweepDeg < 25 ? 13 : 18;
-                  return (
-                    <text key={i} x={lx} y={ly} fill="white" fontSize={fontSize} fontWeight="900" textAnchor="middle" dominantBaseline="middle"
-                      transform={`rotate(${midDeg}, ${lx}, ${ly})`}>
-                      {s.label}{s.weight > 1 ? ` ×${s.weight}` : ''}
-                    </text>
-                  );
-                })}
-              </g>
-              <g id="pins-layer">
-                {slices.map((s, i) => { const r = (s.startDeg + s.sweepDeg - 90) * Math.PI / 180; return <g key={i}><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="10" fill="#fff" filter="url(#p-shad-l)" /><circle cx={250 + 248 * Math.cos(r)} cy={250 + 248 * Math.sin(r)} r="6" fill="#ddd" /></g>; })}
-              </g>
-              <defs><filter id="p-shad-l"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.8" /></filter></defs>
-            </svg>
-          </motion.div>
-          <div style={{ position: 'absolute', top: '-28px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, pointerEvents: 'none' }}>
-            <motion.svg animate={{ rotate: arrowWiggle }} transition={{ duration: 0 }} width="20" height="70" viewBox="0 0 20 70" style={{ overflow: 'visible', filter: 'drop-shadow(0 0 10px #ff2eb4)' }}>
-              <path d="M 10 70 L 4 35 L 10 0 L 16 35 Z" fill="#ff2eb4" stroke="white" strokeWidth="1" />
-              <circle cx="10" cy="35" r="2.5" fill="white" />
-            </motion.svg>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            {renderWheel(rotation, arrowWiggle, slices)}
+            {isPok && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                {renderWheel(rotation2, arrowWiggle2, slices2)}
+              </div>
+            )}
           </div>
+          {isPok && (winner || winner2) && (
+            <div style={{ display: 'flex', gap: '100px', background: '#000', padding: '20px 60px', borderRadius: '20px', border: '2px solid #ff2eb4', boxShadow: '0 0 30px rgba(255, 46, 180, 0.3)' }}>
+              {winner && <div style={{ color: 'white', fontSize: '2.5rem', fontWeight: 900, textShadow: '0 0 10px #ff2eb4' }}>{winner}</div>}
+              {winner2 && <div style={{ color: '#00ffa3', fontSize: '2.5rem', fontWeight: 900, textShadow: '0 0 10px #00ffa3' }}>{winner2}</div>}
+            </div>
+          )}
         </div>
 
         {/* 설정 패널 */}
         <div style={{ width: '380px', background: '#050505', border: '1px solid #111', padding: '30px', borderRadius: '25px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}>
           <h2 style={{ color: '#ff2eb4', marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.4rem' }}><Settings2 /> SETTINGS</h2>
-          <div style={{ color: '#555', fontSize: '0.75rem', marginBottom: '12px' }}>※ "항목x숫자" 형식으로 비율 지정 (예: 치킨x3)</div>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <input value={newItem} onChange={e => setNewItem(e.target.value)} onKeyPress={e => e.key === 'Enter' && addItem(newItem)} placeholder="항목명 또는 항목x3" style={{ flex: 1, background: '#000', border: '1px solid #222', color: 'white', padding: '12px', borderRadius: '10px' }} />
-            <button onClick={() => addItem(newItem)} style={{ cursor: 'pointer', background: '#ff2eb4', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: 900 }}>ADD</button>
-          </div>
+          {!isPok && (
+            <>
+              <div style={{ color: '#555', fontSize: '0.75rem', marginBottom: '12px' }}>※ "항목x숫자" 형식으로 비율 지정 (예: 치킨x3)</div>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <input value={newItem} onChange={e => setNewItem(e.target.value)} onKeyPress={e => e.key === 'Enter' && addItem(newItem)} placeholder="항목명 또는 항목x3" style={{ flex: 1, background: '#000', border: '1px solid #222', color: 'white', padding: '12px', borderRadius: '10px' }} />
+                <button onClick={() => addItem(newItem)} style={{ cursor: 'pointer', background: '#ff2eb4', color: 'white', border: 'none', padding: '0 20px', borderRadius: '10px', fontWeight: 900 }}>ADD</button>
+              </div>
+            </>
+          )}
           <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '20px' }}>
             {items.map((it, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#111', borderRadius: '8px', marginBottom: '8px', borderLeft: `4px solid ${colors[idx % colors.length]}` }}>
                 <span style={{ flex: 1 }}>{it.label}</span>
                 {/* weight 조절 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
-                  <button onClick={() => setItems(prev => prev.map((x, i) => i === idx && x.weight > 1 ? { ...x, weight: x.weight - 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>−</button>
-                  <span style={{ color: colors[idx % colors.length], fontWeight: 900, minWidth: '28px', textAlign: 'center', fontSize: '0.85rem' }}>×{it.weight}</span>
-                  <button onClick={() => setItems(prev => prev.map((x, i) => i === idx ? { ...x, weight: x.weight + 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>+</button>
-                </div>
-                <Trash2 size={16} color="#444" style={{ cursor: 'pointer' }} onClick={() => setItems(items.filter((_, i) => i !== idx))} />
+                {isPok ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '8px' }}>
+                    <span style={{ color: colors[idx % colors.length], fontWeight: 900, minWidth: '28px', textAlign: 'center', fontSize: '0.85rem' }}>×{it.weight}</span>
+                    <Trash2 size={16} color="#ff4b4b" style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => setItems(items.filter((_, i) => i !== idx))} />
+                  </div>
+                ) : (
+                  <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
+                        <button onClick={() => setItems(prev => prev.map((x, i) => i === idx && x.weight > 1 ? { ...x, weight: x.weight - 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>−</button>
+                        <span style={{ color: colors[idx % colors.length], fontWeight: 900, minWidth: '28px', textAlign: 'center', fontSize: '0.85rem' }}>×{it.weight}</span>
+                        <button onClick={() => setItems(prev => prev.map((x, i) => i === idx ? { ...x, weight: x.weight + 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>+</button>
+                      </div>
+                    <Trash2 size={16} color="#ff4b4b" style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => setItems(items.filter((_, i) => i !== idx))} />
+                  </>
+                )}
               </div>
             ))}
           </div>
           <button onClick={spinRoulette} disabled={isSpinning} style={{ cursor: 'pointer', width: '100%', background: isSpinning ? '#222' : 'linear-gradient(45deg, #ff2eb4, #2e96ff)', padding: '18px', borderRadius: '15px', color: 'white', fontWeight: 900, border: 'none' }}>SPIN ROULETTE</button>
         </div>
 
-        <AnimatePresence>{winner && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '60px 100px', borderRadius: '40px', border: '5px solid #ff2eb4', textAlign: 'center', boxShadow: '0 0 100px rgba(255, 46, 180, 0.6)' }}><PartyPopper size={80} color="#ff2eb4" style={{ marginBottom: '25px' }} /><div style={{ color: 'white', fontSize: '4.8rem', fontWeight: 900, textShadow: '0 0 40px #ff2eb4' }}>{winner}</div><button onClick={() => setWinner(null)} style={{ cursor: 'pointer', marginTop: '40px', background: 'white', color: 'black', padding: '15px 70px', borderRadius: '15px', fontWeight: 900 }}>CLOSE</button></motion.div></motion.div>)}</AnimatePresence>
+        <AnimatePresence>{(!isPok && winner) && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(20px)' }}><motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} style={{ background: '#050505', padding: '60px 100px', borderRadius: '40px', border: '5px solid #ff2eb4', textAlign: 'center', boxShadow: '0 0 100px rgba(255, 46, 180, 0.6)' }}><PartyPopper size={80} color="#ff2eb4" style={{ marginBottom: '25px' }} />{winner && <div style={{ color: 'white', fontSize: '4.8rem', fontWeight: 900, textShadow: '0 0 40px #ff2eb4' }}>{winner}</div>}{winner2 && <div style={{ color: '#00ffa3', fontSize: '4.8rem', fontWeight: 900, textShadow: '0 0 40px #00ffa3', marginTop: winner ? '20px' : '0' }}>{winner2}</div>}<button onClick={() => { setWinner(null); setWinner2(null); }} style={{ cursor: 'pointer', marginTop: '40px', background: 'white', color: 'black', padding: '15px 70px', borderRadius: '15px', fontWeight: 900 }}>CLOSE</button></motion.div></motion.div>)}</AnimatePresence>
       </div>
     </div>
   );
@@ -1763,6 +1959,7 @@ interface RatingCharacter {
   id: string;
   memberName: string;
   characterName: string;
+  jobName?: string;
   league: RatingLeague;
   score: number;   // 등록 시 입력한 고정 점수
   rating: number;  // 대결로 변동되는 레이팅 (1000 시작)
@@ -1785,7 +1982,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [battles, setBattles] = useState<any[]>([]);
   const [activeLeague, setActiveLeague] = useState<RatingLeague>('4000');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [regForm, setRegForm] = useState({ memberName: '', characterName: '', league: '4000' as RatingLeague, initialRating: '' });
+  const [regForm, setRegForm] = useState({ memberName: '', characterName: '', jobName: '', league: '4000' as RatingLeague, initialRating: '' });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1830,7 +2027,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
     setLoading(false);
     if (data.success) {
       setShowRegisterModal(false);
-      setRegForm({ memberName: '', characterName: '', league: '4000', initialRating: '' });
+      setRegForm({ memberName: '', characterName: '', jobName: '', league: '4000', initialRating: '' });
       fetchRating();
     } else {
       setErrorMsg(data.message || '등록 실패');
@@ -1947,7 +2144,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
           <button onClick={() => {
             setShowRegisterModal(true);
             // 멤버면 자동으로 본인 이름 세팅
-            setRegForm({ memberName: isMember && !isAdmin ? user.name : '', characterName: '', league: activeLeague, initialRating: '' });
+            setRegForm({ memberName: isMember && !isAdmin ? user.name : '', characterName: '', jobName: '', league: activeLeague, initialRating: '' });
           }} style={{
             background: cfg.color, color: '#000', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem'
           }}>+ 캐릭터 등록</button>
@@ -1982,12 +2179,34 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                     <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#fff' }}>{char.characterName}</span>
+                    {char.jobName && <span style={{ fontSize: '0.82rem', color: '#a78bfa', background: '#1e1030', padding: '1px 8px', borderRadius: '4px', border: '1px solid #4c1d95' }}>{char.jobName}</span>}
                     {isOnFire && (
                       <span title={`${char.winStreak}연승 중!`} style={{ fontSize: '1.1rem', lineHeight: 1, filter: 'drop-shadow(0 0 6px #ff6a00)' }}>
                         {'🔥'.repeat(Math.min(Math.floor((char.winStreak || 0) / 5), 3))}
                       </span>
                     )}
                     <span style={{ fontSize: '0.78rem', color: '#666', background: '#1a1a1a', padding: '2px 8px', borderRadius: '20px' }}>{char.memberName}</span>
+                    <a
+                      href={`https://lopec.kr/character/specPoint/${encodeURIComponent(char.characterName)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        fontSize: '0.72rem',
+                        color: '#a78bfa',
+                        background: 'rgba(167, 139, 250, 0.1)',
+                        border: '1px solid rgba(167, 139, 250, 0.3)',
+                        padding: '2px 10px',
+                        borderRadius: '20px',
+                        textDecoration: 'none',
+                        fontWeight: 900,
+                        marginLeft: '4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      로펙 🔗
+                    </a>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: '#666' }}>
                     <span style={{ color: '#4ade80' }}>▲ {char.wins}승</span>
@@ -2182,6 +2401,14 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
               value={regForm.characterName}
               onChange={e => setRegForm(f => ({ ...f, characterName: e.target.value }))}
               placeholder="캐릭터명 입력"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #333', background: '#0a0a0a', color: '#fff', fontSize: '0.95rem', boxSizing: 'border-box', marginBottom: '12px' }}
+            />
+
+            <label style={{ display: 'block', color: '#888', fontSize: '0.85rem', marginBottom: '6px' }}>직업명</label>
+            <input
+              value={regForm.jobName}
+              onChange={e => setRegForm(f => ({ ...f, jobName: e.target.value }))}
+              placeholder="직업명 입력"
               style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #333', background: '#0a0a0a', color: '#fff', fontSize: '0.95rem', boxSizing: 'border-box', marginBottom: '12px' }}
             />
 
@@ -2853,6 +3080,24 @@ const PinballGame: React.FC = () => {
 };
 
 // ─────────────────────────────────────────────
+// OBS 오버레이용 사운드 재생 (AudioContext — autoplay 정책 우회)
+const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+const audioBufferCache = new Map<string, AudioBuffer>();
+async function playOverlaySfx(url: string) {
+  try {
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (!audioBufferCache.has(url)) {
+      const res = await fetch(url);
+      const arr = await res.arrayBuffer();
+      audioBufferCache.set(url, await audioCtx.decodeAudioData(arr));
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioBufferCache.get(url)!;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } catch (e) { console.warn('sfx error', e); }
+}
+
 // 🎥 OBS 오버레이 — 미션보드 (투명 배경)
 // ?overlay=mission 으로 접근
 // ?w=500&h=720 으로 사이즈 조절 (기본 500×720)
@@ -2866,7 +3111,10 @@ const MissionBoardOverlay: React.FC = () => {
 
   useEffect(() => {
     fetch(`${SOCKET_URL}/missions`).then(r => r.json()).then(data => setMissions(data));
-    const handleNew = (m: any) => setMissions(p => [...p, m]);
+    const handleNew = (m: any) => {
+      if (m.type !== 'rogada') playOverlaySfx('/squeaky_mission_sound.mp3');
+      setMissions(p => [...p, m]);
+    };
     const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
     const handleDel = (id: string) => setMissions(p => p.filter(m => String(m.id) !== String(id)));
     socket.on('newMission', handleNew);
@@ -2889,7 +3137,7 @@ const MissionBoardOverlay: React.FC = () => {
   const groups = Array.from(grouped.values());
 
   return (
-    <div style={{ width: `${W}px`, height: `${H}px`, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', boxSizing: 'border-box' }}>
+    <div style={{ width: `${W}px`, height: `${H}px`, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '10px', padding: '15px', boxSizing: 'border-box', background: 'transparent' }}>
       {groups.length === 0 ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1rem', fontWeight: 700 }}>미션 없음</span>
@@ -2913,12 +3161,10 @@ const MissionBoardOverlay: React.FC = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '10px 14px', borderRadius: '10px',
-                  background: 'rgba(8,8,8,0.85)',
+                  background: '#0a0a0a',
                   border: `2px solid ${isLive ? '#00ffa3' : isLadder ? '#ffbd2e' : '#2a2a2a'}`,
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
                   boxSizing: 'border-box', width: '100%', flexShrink: 0,
-                  boxShadow: isLive ? '0 0 12px rgba(0,255,163,0.25)' : isLadder ? '0 0 12px rgba(255,189,46,0.2)' : 'none',
+                  boxShadow: isLadder ? '0 0 12px rgba(255,189,46,0.2)' : 'none',
                 }}
               >
                 <div style={{ flexShrink: 0, padding: '3px 8px', borderRadius: '5px', background: isLive ? '#00ffa3' : '#333', color: isLive ? 'black' : '#888', fontSize: '0.6rem', fontWeight: 900 }}>
@@ -2930,10 +3176,10 @@ const MissionBoardOverlay: React.FC = () => {
                   </div>
                 )}
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: 900, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isLadder ? '#ffbd2e' : 'white' }}>
+                  <span style={{ fontWeight: 900, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isLadder ? '#ffbd2e' : 'white', lineHeight: 1.2 }}>
                     {contentFixed}
                   </span>
-                  <span style={{ fontSize: '0.7rem', color: isLadder ? '#ffbd2e88' : '#00ffa388', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.85rem', color: isLadder ? '#ffbd2e88' : '#00ffa388', fontWeight: 600 }}>
                     @{mission.creator}{count > 1 ? ` 외 ${count - 1}명` : ''}
                   </span>
                 </div>
@@ -2959,7 +3205,10 @@ const RogadaBoardOverlay: React.FC = () => {
 
   useEffect(() => {
     fetch(`${SOCKET_URL}/missions`).then(r => r.json()).then(data => setMissions(data));
-    const handleNew = (m: any) => setMissions(p => [...p, m]);
+    const handleNew = (m: any) => {
+      if (m.type === 'rogada' && m.target === memberParam) playOverlaySfx('/ttiring_ttirring.mp3');
+      setMissions(p => [...p, m]);
+    };
     const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
     const handleDel = (id: string) => setMissions(p => p.filter(m => String(m.id) !== String(id)));
     socket.on('newMission', handleNew);
@@ -2975,7 +3224,7 @@ const RogadaBoardOverlay: React.FC = () => {
   const memberMissions = missions.filter(m => m.type === 'rogada' && m.target === memberParam && m.status !== 'completed');
 
   return (
-    <div style={{ width: `${W}px`, height: `${H}px`, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', boxSizing: 'border-box' }}>
+    <div style={{ width: `${W}px`, height: `${H}px`, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '10px', padding: '15px', boxSizing: 'border-box', background: 'transparent' }}>
       {memberMissions.length === 0 ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1rem', fontWeight: 700 }}>미션 없음</span>
@@ -2996,12 +3245,10 @@ const RogadaBoardOverlay: React.FC = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '10px 14px', borderRadius: '10px',
-                  background: 'rgba(8,8,8,0.85)',
+                  background: '#0a0a0a',
                   border: `2px solid ${isLive ? '#00ffa3' : '#2a2a2a'}`,
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
                   boxSizing: 'border-box', width: '100%', flexShrink: 0,
-                  boxShadow: isLive ? '0 0 12px rgba(0,255,163,0.25)' : 'none',
+                  boxShadow: 'none',
                 }}
               >
                 <div style={{ flexShrink: 0, padding: '3px 8px', borderRadius: '5px', background: isLive ? '#00ffa3' : '#333', color: isLive ? 'black' : '#888', fontSize: '0.6rem', fontWeight: 900 }}>
@@ -3013,10 +3260,10 @@ const RogadaBoardOverlay: React.FC = () => {
                   </div>
                 )}
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: 900, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>
+                  <span style={{ fontWeight: 900, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white', lineHeight: 1.2 }}>
                     {mission.content}
                   </span>
-                  <span style={{ fontSize: '0.7rem', color: '#00ffa388', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.85rem', color: '#00ffa388', fontWeight: 600 }}>
                     @{mission.creator}
                   </span>
                 </div>
@@ -3037,10 +3284,14 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isOverlay) {
       document.body.classList.add('overlay-mode');
+      document.body.style.backgroundColor = 'transparent';
+      document.body.style.background = 'transparent';
       document.getElementById('root')?.classList.add('overlay-root');
     }
     return () => {
       document.body.classList.remove('overlay-mode');
+      document.body.style.backgroundColor = '';
+      document.body.style.background = '';
       document.getElementById('root')?.classList.remove('overlay-root');
     };
   }, [isOverlay]);
