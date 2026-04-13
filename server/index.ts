@@ -507,7 +507,7 @@ app.get('/rating', (req, res) => {
 app.post('/rating/register', (req, res) => {
   const { memberName, characterName, league, initialRating } = req.body;
   if (!memberName || !characterName || !league) return res.status(400).json({ success: false, message: '필수 값 누락' });
-  if (!['4000', '5000', '6000'].includes(league)) return res.status(400).json({ success: false, message: '유효하지 않은 리그' });
+  if (!['4000', '5000', '6000', 'extra'].includes(league)) return res.status(400).json({ success: false, message: '유효하지 않은 리그' });
   if (initialRating === undefined || initialRating === null || isNaN(Number(initialRating))) return res.status(400).json({ success: false, message: '올바른 점수를 입력하세요' });
 
   const db = getRatingDB();

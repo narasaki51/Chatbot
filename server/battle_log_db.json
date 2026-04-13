@@ -1,3 +1,25 @@
 {
-  "logs": []
+  "logs": [
+    {
+      "type": "register",
+      "characterId": "1776085186654_szmp5",
+      "memberName": "찌모",
+      "characterName": "찌모모닛",
+      "league": "extra",
+      "score": 3000,
+      "registeredAt": "2026-04-13T12:59:46.654Z"
+    },
+    {
+      "type": "unregister",
+      "characterId": "1776085186654_szmp5",
+      "memberName": "찌모",
+      "characterName": "찌모모닛",
+      "league": "extra",
+      "score": 3000,
+      "rating": 1000,
+      "wins": 0,
+      "losses": 0,
+      "deletedAt": "2026-04-13T12:59:51.168Z"
+    }
+  ]
 }

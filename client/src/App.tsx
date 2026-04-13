@@ -1954,7 +1954,7 @@ const RouletteGame: React.FC<{ user: UserAuth, isPokMode?: boolean }> = ({ user,
 // ─────────────────────────────────────────────
 // 🏆 레이팅 보드
 // ─────────────────────────────────────────────
-type RatingLeague = '4000' | '5000' | '6000';
+type RatingLeague = '4000' | '5000' | '6000' | 'extra';
 interface RatingCharacter {
   id: string;
   memberName: string;
@@ -1973,6 +1973,7 @@ const LEAGUE_CONFIG: Record<RatingLeague, { label: string; color: string; bg: st
   '4000': { label: '4000점 리그', color: '#60a5fa', bg: 'linear-gradient(135deg, #0f1f3d 0%, #050d1f 100%)', minRating: 4000 },
   '5000': { label: '5000점 리그', color: '#34d399', bg: 'linear-gradient(135deg, #0a2a1e 0%, #050f0a 100%)', minRating: 5000 },
   '6000': { label: '6000점 리그', color: '#f59e0b', bg: 'linear-gradient(135deg, #2a1a00 0%, #0f0800 100%)', minRating: 6000 },
+  'extra': { label: '번외 (4000점 이하)', color: '#a0a0a0', bg: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)', minRating: 0 },
 };
 
 const MEMBERS = ['찌모', '미랑', '갱쥰', '서씨', '떠기', '말구'];
@@ -2116,7 +2117,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '10px 0' }}>
       {/* 리그 탭 */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
-        {(['4000', '5000', '6000'] as RatingLeague[]).map(lg => {
+        {(['4000', '5000', '6000', 'extra'] as RatingLeague[]).map(lg => {
           const c = LEAGUE_CONFIG[lg];
           const isActive = activeLeague === lg;
           const count = characters.filter(ch => ch.league === lg).length;
@@ -2362,7 +2363,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
 
             <label style={{ display: 'block', color: '#888', fontSize: '0.85rem', marginBottom: '6px' }}>리그 선택</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              {(['4000', '5000', '6000'] as RatingLeague[]).map(lg => (
+              {(['4000', '5000', '6000', 'extra'] as RatingLeague[]).map(lg => (
                 <button key={lg} onClick={() => setRegForm(f => ({ ...f, league: lg }))} style={{
                   flex: 1, padding: '8px', borderRadius: '8px', border: `1px solid ${regForm.league === lg ? LEAGUE_CONFIG[lg].color : '#333'}`,
                   background: regForm.league === lg ? LEAGUE_CONFIG[lg].bg : 'transparent',
@@ -3209,7 +3210,13 @@ const RogadaBoardOverlay: React.FC = () => {
       if (m.type === 'rogada' && m.target === memberParam) playOverlaySfx('/ttiring_ttirring.mp3');
       setMissions(p => [...p, m]);
     };
-    const handleUpdate = (m: any) => setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
+    const handleUpdate = (m: any) => {
+      if (m.status === 'completed') {
+        setMissions(p => p.filter(o => String(o.id) !== String(m.id)));
+      } else {
+        setMissions(p => p.map(o => String(o.id) === String(m.id) ? m : o));
+      }
+    };
     const handleDel = (id: string) => setMissions(p => p.filter(m => String(m.id) !== String(id)));
     socket.on('newMission', handleNew);
     socket.on('updateMission', handleUpdate);
