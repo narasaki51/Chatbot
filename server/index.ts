@@ -28,9 +28,13 @@ const io = new Server(httpServer, {
 
 const DB_PATH = path.join(__dirname, 'missions_db.json');
 if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify([]));
+const FEEDBACK_DB_PATH = path.join(__dirname, 'feedback_db.json');
+if (!fs.existsSync(FEEDBACK_DB_PATH)) fs.writeFileSync(FEEDBACK_DB_PATH, JSON.stringify([]));
 
 const getMissions = () => JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 const saveMissions = (missions: any) => fs.writeFileSync(DB_PATH, JSON.stringify(missions));
+const getFeedbacks = () => JSON.parse(fs.readFileSync(FEEDBACK_DB_PATH, 'utf-8'));
+const saveFeedbacks = (data: any) => fs.writeFileSync(FEEDBACK_DB_PATH, JSON.stringify(data, null, 2));
 
 const client = new ChzzkClient();
 
@@ -391,8 +395,46 @@ app.delete('/missions/:id', (req, res) => {
   res.status(204).send();
 });
 
+// 피드백 관련 API
+app.get('/feedbacks', (req, res) => res.json(getFeedbacks()));
+app.post('/feedbacks', (req, res) => {
+  const { sender, content, role } = req.body;
+  if (!sender || !content) return res.status(400).json({ error: '내용 누락' });
+  const feedbacks = getFeedbacks();
+  const newFeedback = {
+    id: Date.now().toString(),
+    sender,
+    content,
+    role,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  feedbacks.push(newFeedback);
+  saveFeedbacks(feedbacks);
+  io.emit('feedbackUpdate', feedbacks);
+  res.json({ success: true, feedback: newFeedback });
+});
+app.patch('/feedbacks/:id', (req, res) => {
+  const { status } = req.body;
+  const feedbacks = getFeedbacks();
+  const f = feedbacks.find((o: any) => o.id === req.params.id);
+  if (f) {
+    if (status) f.status = status;
+    saveFeedbacks(feedbacks);
+    io.emit('feedbackUpdate', feedbacks);
+  }
+  res.json(f);
+});
+app.delete('/feedbacks/:id', (req, res) => {
+  const feedbacks = getFeedbacks();
+  const next = feedbacks.filter((f: any) => f.id !== req.params.id);
+  saveFeedbacks(next);
+  io.emit('feedbackUpdate', next);
+  res.status(204).send();
+});
+
 // [최적화된 Catch-all] API 경로가 아닌 요청만 React로 전달
-const API_PREFIXES = ['/missions', '/login', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating'];
+const API_PREFIXES = ['/missions', '/login', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks'];
 app.use((req, res, next) => {
   const isApi = API_PREFIXES.some(prefix => req.path.startsWith(prefix));
   if (req.method === 'GET' && !isApi) {

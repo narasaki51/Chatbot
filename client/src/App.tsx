@@ -67,7 +67,7 @@ const AppMain: React.FC = () => {
     } catch {}
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback'>('dashboard');
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
@@ -186,7 +186,7 @@ const AppMain: React.FC = () => {
   }
 
   // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정 (사다리/룰렛은 허용)
-  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette') {
+  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette' && view !== 'feedback') {
     setView('group');
   }
   // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정 (사다리 허용)
@@ -211,6 +211,7 @@ const AppMain: React.FC = () => {
             <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
             <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
             <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+            <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
             {user.name === '폭병' && (
               <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
             )}
@@ -239,6 +240,7 @@ const AppMain: React.FC = () => {
               <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
             )}
             <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
+            <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
             <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
             <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
           </div>
@@ -364,6 +366,8 @@ const AppMain: React.FC = () => {
           <RatingBoard key="rating-comp-last" user={user!} />
                       ) : view === 'pok_roulette' ? (
                         <RouletteGame key="pok-roul-comp-last" user={user!} isPokMode={true} />
+                        ) : view === 'feedback' ? (
+                          <FeedbackBoard user={user!} />
         ) : (
           <RouletteGame key="roul-comp-last" user={user!} />
         )}
@@ -1970,6 +1974,135 @@ const RouletteGame: React.FC<{ user: UserAuth, isPokMode?: boolean }> = ({ user,
 };
 
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// 💡 피드백 & 건의 게시판
+// ─────────────────────────────────────────────
+interface Feedback {
+  id: string;
+  sender: string;
+  content: string;
+  role: string;
+  status: 'pending' | 'applied';
+  createdAt: string;
+}
+
+const FeedbackBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [newContent, setNewContent] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const fetchFeedbacks = async () => {
+    try {
+      const res = await fetch(`${SOCKET_URL}/feedbacks`);
+      const data = await res.json();
+      setFeedbacks(data);
+    } catch { }
+  };
+
+  useEffect(() => {
+    fetchFeedbacks();
+    const onUpdate = (data: Feedback[]) => setFeedbacks(data);
+    socket.on('feedbackUpdate', onUpdate);
+    return () => { socket.off('feedbackUpdate', onUpdate); };
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContent.trim()) return;
+    setLoading(true);
+    await fetch(`${SOCKET_URL}/feedbacks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: user.name, content: newContent, role: user.role })
+    });
+    setNewContent('');
+    setLoading(false);
+    fetchFeedbacks();
+  };
+
+  const handleApply = async (id: string) => {
+    await fetch(`${SOCKET_URL}/feedbacks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'applied' })
+    });
+    fetchFeedbacks();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('삭제하시겠습니까?')) return;
+    await fetch(`${SOCKET_URL}/feedbacks/${id}`, { method: 'DELETE' });
+    fetchFeedbacks();
+  };
+
+  // 일반 멤버는 본인 글만, 어드민은 전체
+  const isAdmin = user.role === 'admin' || user.role === 'host';
+  const displayList = isAdmin
+    ? feedbacks
+    : feedbacks.filter(f => f.sender === user.name);
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '10px 0' }}>
+      <div style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)', borderRadius: '20px', padding: '30px', border: '1px solid #333', marginBottom: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+        <h2 style={{ margin: '0 0 10px 0', color: '#ff6a00', fontWeight: 900, fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Sparkles size={28} /> 피드백 & 건의
+        </h2>
+        <p style={{ color: '#888', fontSize: '1rem', marginBottom: '25px' }}>방송 시스템 개선을 위한 제안이나 버그 제보를 자유롭게 남겨주세요.</p>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <textarea
+            value={newContent}
+            onChange={e => setNewContent(e.target.value)}
+            placeholder="여기에 내용을 입력하세요..."
+            style={{ width: '100%', height: '120px', background: '#050505', border: '1px solid #222', borderRadius: '15px', padding: '20px', color: 'white', fontSize: '1rem', outline: 'none', resize: 'none', transition: 'border-color 0.2s' }}
+            onFocus={(e) => e.target.style.borderColor = '#ff6a00'}
+            onBlur={(e) => e.target.style.borderColor = '#222'}
+          />
+          <button
+            type="submit"
+            disabled={loading || !newContent.trim()}
+            style={{ alignSelf: 'flex-end', background: '#ff6a00', color: 'black', border: 'none', padding: '12px 35px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '1rem', boxShadow: '0 5px 15px rgba(255, 106, 0, 0.3)', opacity: loading ? 0.5 : 1, transition: 'all 0.2s' }}
+          >
+            {loading ? '전송 중...' : '작성하기 ✉️'}
+          </button>
+        </form>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {displayList.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#444', padding: '60px 0', fontSize: '1.1rem', fontWeight: 700 }}>작성된 피드백이 없습니다.</div>
+        ) : (
+          displayList.sort((a, b) => b.id.localeCompare(a.id)).map(f => (
+            <div key={f.id} style={{ background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '18px', padding: '25px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', transition: 'transform 0.2s' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#ff6a00' }}>{f.sender}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#555', background: '#1a1a1a', padding: '2px 8px', borderRadius: '6px' }}>{f.role}</span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#444' }}>{new Date(Number(f.id)).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {f.status === 'applied' && <span style={{ background: 'rgba(0, 255, 163, 0.1)', color: '#00ffa3', border: '1px solid #00ffa3', padding: '4px 12px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>✓ 반영됨</span>}
+                  {user.role === 'admin' && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {f.status !== 'applied' && (
+                        <button onClick={() => handleApply(f.id)} style={{ background: '#00ffa3', color: 'black', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 900 }}>반영</button>
+                      )}
+                      <button onClick={() => handleDelete(f.id)} style={{ background: '#222', color: '#ff4b4b', border: '1px solid #ff4b4b', padding: '6px 14px', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 900 }}>삭제</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ color: '#eee', fontSize: '1rem', whiteSpace: 'pre-line', lineHeight: '1.6', background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>{f.content}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 // 🏆 레이팅 보드
 // ─────────────────────────────────────────────
 type RatingLeague = '4000' | '5000' | '6000' | 'extra';
