@@ -18,6 +18,10 @@ const LoginPage: React.FC<{ onSuccess: (user: UserAuth) => void }> = ({ onSucces
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
 
+  // URL 매개변수 확인 (?noBg=true)
+  const params = new URLSearchParams(window.location.search);
+  const noBg = params.get('noBg') === 'true';
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     fetch(`${SOCKET_URL}/login`, {
@@ -34,8 +38,17 @@ const LoginPage: React.FC<{ onSuccess: (user: UserAuth) => void }> = ({ onSucces
   };
 
   return (
-    <div style={{ width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'url(/login-bg.png) center bottom / 100% 100% no-repeat', color: 'white', position: 'relative' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />
+    <div style={{
+      width: '100%',
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: noBg ? '#050505' : 'url(/login-bg.png) center bottom / 100% 100% no-repeat',
+      color: 'white',
+      position: 'relative'
+    }}>
+      {!noBg && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />}
       <form onSubmit={handleLogin} style={{ position: 'relative', zIndex: 1, background: 'rgba(10,10,10,0.85)', padding: '40px', borderRadius: '20px', width: '350px', border: '1px solid #333', boxShadow: '0 10px 40px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', gap: '20px', backdropFilter: 'blur(6px)' }}>
         <h2 style={{ textAlign: 'center', color: '#00ffa3', display: 'flex', justifyContent: 'center', gap: '10px', alignItems: 'center' }}><Lock /> 시스템 로그인</h2>
         <input placeholder="아이디" value={id} onChange={e => setId(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #444', background: '#222', color: 'white', outline: 'none' }} />
@@ -185,8 +198,11 @@ const AppMain: React.FC = () => {
     <div style={{ width: '100%', minHeight: '100vh', background: '#050505', padding: '15px', paddingTop: '80px', color: 'white', boxSizing: 'border-box' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1.5px solid #111', paddingBottom: '15px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: '#050505', padding: '15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Zap size={24} color="#00ffa3" fill="#00ffa333" />
-          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#00ffa3', letterSpacing: '-1px' }}>찌모의 놀이터 <span style={{ fontSize: '0.8rem', color: '#888' }}>({user.name})</span></h1>
+          <Zap size={24} color={user.name === '폭병' ? '#ff2eb4' : '#00ffa3'} fill={user.name === '폭병' ? '#ff2eb433' : '#00ffa333'} />
+          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: user.name === '폭병' ? '#ff2eb4' : '#00ffa3', letterSpacing: '-1px' }}>
+            {user.name !== '폭병' && '찌모의 놀이터 '}
+            <span style={{ fontSize: '0.8rem', color: '#888' }}>({user.name})</span>
+          </h1>
         </div>
 
         {user.role === 'member' && (
@@ -1990,6 +2006,8 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRating, setEditRating] = useState('');
+  const [editingScoreId, setEditingScoreId] = useState<string | null>(null);
+  const [editScore, setEditScore] = useState('');
   const [challengeTargetId, setChallengeTargetId] = useState<string | null>(null);
   const [battleListOpen, setBattleListOpen] = useState(true);
   const [submittingBattleId, setSubmittingBattleId] = useState<string | null>(null);
@@ -2053,6 +2071,19 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
     });
     setEditingId(null);
     setEditRating('');
+    fetchRating();
+  };
+
+  const handleEditScore = async (id: string) => {
+    const val = parseInt(editScore);
+    if (isNaN(val) || val < 0) return;
+    await fetch(`${API}/rating/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setScore: val })
+    });
+    setEditingScoreId(null);
+    setEditScore('');
     fetchRating();
   };
 
@@ -2221,10 +2252,35 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                 {/* 점수(고정) + 레이팅 */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', minWidth: '130px' }}>
                   {/* 고정 점수 */}
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.72rem', color: '#555', marginBottom: '1px' }}>점수 (고정)</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: cfg.color }}>{(char.score ?? char.rating).toLocaleString()}<span style={{ fontSize: '0.7rem', fontWeight: 400, color: '#555', marginLeft: '3px' }}>점</span></div>
-                  </div>
+                  {(() => {
+                    const canEditScore = isAdmin || char.memberName === user.name;
+                    return editingScoreId === char.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={editScore}
+                          onChange={e => setEditScore(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') handleEditScore(char.id); if (e.key === 'Escape') { setEditingScoreId(null); setEditScore(''); } }}
+                          autoFocus
+                          style={{ width: '90px', padding: '5px 8px', borderRadius: '6px', border: `1px solid ${cfg.color}`, background: '#0a0a0a', color: cfg.color, fontSize: '0.95rem', fontWeight: 900, textAlign: 'right' }}
+                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => handleEditScore(char.id)} style={{ background: cfg.color, color: '#000', border: 'none', padding: '3px 8px', borderRadius: '5px', fontWeight: 900, cursor: 'pointer', fontSize: '0.75rem' }}>저장</button>
+                          <button onClick={() => { setEditingScoreId(null); setEditScore(''); }} style={{ background: '#1a1a1a', color: '#888', border: '1px solid #333', padding: '3px 6px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => canEditScore ? (setEditingScoreId(char.id), setEditScore(String(char.score ?? char.rating))) : null}
+                        title={canEditScore ? '클릭해서 점수 수정' : ''}
+                        style={{ textAlign: 'right', cursor: canEditScore ? 'pointer' : 'default' }}
+                      >
+                        <div style={{ fontSize: '0.72rem', color: '#555', marginBottom: '1px' }}>점수 (고정)</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 900, color: cfg.color }}>{(char.score ?? char.rating).toLocaleString()}<span style={{ fontSize: '0.7rem', fontWeight: 400, color: '#555', marginLeft: '3px' }}>점</span></div>
+                      </div>
+                    );
+                  })()}
                   {/* 레이팅 (대결 변동) */}
                   {editingId === char.id ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>

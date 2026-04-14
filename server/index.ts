@@ -496,6 +496,40 @@ app.post('/auto-accept', (req, res) => {
   res.json({ success: true, enabled: isAutoAccept });
 });
 
+// ==================== 폭병 룰렛 DB ====================
+const POK_DB_PATH = path.join(__dirname, 'pok_roulette_db.json');
+if (!fs.existsSync(POK_DB_PATH)) {
+  fs.writeFileSync(POK_DB_PATH, JSON.stringify({ items1: [], personPools: {} }));
+}
+
+app.get('/pok-roulette-state', (req, res) => {
+  try {
+    const data = JSON.parse(fs.readFileSync(POK_DB_PATH, 'utf-8'));
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: 'DB Read Error' });
+  }
+});
+
+app.post('/pok-roulette-state', (req, res) => {
+  try {
+    const { items1, personPools } = req.body;
+    fs.writeFileSync(POK_DB_PATH, JSON.stringify({ items1, personPools }, null, 2));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'DB Write Error' });
+  }
+});
+
+app.delete('/pok-roulette-state', (req, res) => {
+  try {
+    fs.writeFileSync(POK_DB_PATH, JSON.stringify({ items1: [], personPools: {} }));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'DB Reset Error' });
+  }
+});
+
 // ==================== 레이팅 보드 ====================
 const RATING_DB_PATH = path.join(__dirname, 'rating_db.json');
 if (!fs.existsSync(RATING_DB_PATH)) fs.writeFileSync(RATING_DB_PATH, JSON.stringify({ characters: [] }));
@@ -528,7 +562,7 @@ app.get('/rating', (req, res) => {
 
 // 캐릭터 등록
 app.post('/rating/register', (req, res) => {
-  const { memberName, characterName, league, initialRating } = req.body;
+  const { memberName, characterName, jobName, league, initialRating } = req.body;
   if (!memberName || !characterName || !league) return res.status(400).json({ success: false, message: '필수 값 누락' });
   if (!['4000', '5000', '6000', 'extra'].includes(league)) return res.status(400).json({ success: false, message: '유효하지 않은 리그' });
   if (initialRating === undefined || initialRating === null || isNaN(Number(initialRating))) return res.status(400).json({ success: false, message: '올바른 점수를 입력하세요' });
@@ -544,6 +578,7 @@ app.post('/rating/register', (req, res) => {
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     memberName,
     characterName,
+    jobName: jobName || '',
     league,
     score: Number(initialRating),  // 등록 시 입력한 고정 점수
     rating: 1000,                  // 대결 레이팅 (1000 시작)
@@ -559,6 +594,7 @@ app.post('/rating/register', (req, res) => {
     characterId: newChar.id,
     memberName: newChar.memberName,
     characterName: newChar.characterName,
+    jobName: newChar.jobName,
     league: newChar.league,
     score: newChar.score,
     registeredAt: newChar.registeredAt
@@ -593,14 +629,17 @@ app.delete('/rating/:id', (req, res) => {
 
 // 레이팅 업데이트 (승/패 or 직접 수정)
 app.patch('/rating/:id', (req, res) => {
-  const { result, ratingChange, setRating } = req.body;
+  const { result, ratingChange, setRating, setScore } = req.body;
   const db = getRatingDB();
   const char = db.characters.find((c: any) => c.id === req.params.id);
   if (!char) return res.status(404).json({ success: false, message: '캐릭터 없음' });
 
   if (setRating !== undefined) {
-    // 점수 직접 수정
+    // 레이팅 직접 수정
     char.rating = Math.max(0, Number(setRating));
+  } else if (setScore !== undefined) {
+    // 점수(고정) 직접 수정
+    char.score = Math.max(0, Number(setScore));
   } else if (result === 'win') {
     char.wins += 1;
     char.rating += (ratingChange || 20);
