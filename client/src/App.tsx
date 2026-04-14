@@ -64,7 +64,7 @@ const AppMain: React.FC = () => {
     try {
       const saved = localStorage.getItem('userSession');
       if (saved) return JSON.parse(saved) as UserAuth;
-    } catch {}
+    } catch { }
     return null;
   });
   const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback'>('dashboard');
@@ -296,81 +296,81 @@ const AppMain: React.FC = () => {
           <div style={{ position: 'fixed', top: 0, right: 0, width: '32vw', height: '100vh', zIndex: 0, pointerEvents: 'none', backgroundImage: 'url(/login-bg.png)', backgroundSize: '200% 100%', backgroundPosition: 'right center', backgroundRepeat: 'no-repeat', maskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)' }} />
         </>}
         <div style={{ position: 'relative', zIndex: 1 }}>
-        {view === 'dashboard' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {(user.role === 'admin' || user.role === 'host') && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', gap: '10px' }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  background: isAutoAccept ? '#00ffa322' : '#222',
-                  padding: '10px 20px',
-                  borderRadius: '15px',
-                  border: `1px solid ${isAutoAccept ? '#00ffa3' : '#333'}`,
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: 900,
-                  color: isAutoAccept ? '#00ffa3' : '#888',
-                  transition: 'all 0.2s'
-                }}>
-                  <input type="checkbox" checked={isAutoAccept} onChange={toggleAutoAccept} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
-                  {isAutoAccept ? '⚡️ 미션 자동 수락 모드 ON' : '⏸️ 미션 수동 수락 모드'}
-                </label>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px', 
-                  background: isMissionDonationOnly ? '#ffbd2e22' : '#222', 
-                  padding: '10px 20px', 
-                  borderRadius: '15px', 
-                  border: `1px solid ${isMissionDonationOnly ? '#ffbd2e' : '#333'}`,
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: 900,
-                  color: isMissionDonationOnly ? '#ffbd2e' : '#888',
-                  transition: 'all 0.2s'
-                }}>
-                  <input type="checkbox" checked={isMissionDonationOnly} onChange={toggleMissionDonationOnly} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
-                  {isMissionDonationOnly ? '💰 도네이션 미션만 수신 중' : '💬 모든 채팅 미션 수신 중'}
-                </label>
-              </div>
-            )}
-            <AnimatePresence>
-              {(() => {
-                const mainMissions = missions.filter(m => m.type !== 'rogada');
-                // 내용 기준 중복 그룹핑
-                const grouped = new Map<string, any[]>();
-                mainMissions.forEach(m => {
-                  const key = (m.content.startsWith('!미션 ') ? m.content.replace('!미션 ', '') : m.content).trim().toLowerCase();
-                  if (!grouped.has(key)) grouped.set(key, []);
-                  grouped.get(key)!.push(m);
-                });
-                return Array.from(grouped.values()).map(group => (
-                  <MissionCard key={group[0].id} mission={group[0]} count={group.length} onUpdate={updateStatus} onDelete={() => { group.forEach(m => deleteMission(m.id)); }} onGoLadder={() => setView('ladder')} />
-                ));
-              })()}
-            </AnimatePresence>
-          </div>
-        ) : view === 'ladder' ? (
-          <LadderGame key="lad-comp-last" />
-        ) : view === 'group' ? (
-          <GroupMissionBoard key="grp-board-last" missions={missions} onUpdate={updateStatus} onDelete={deleteMission} user={user!} isAutoAccept={isAutoAccept} onToggleAutoAccept={toggleAutoAccept} isMissionDonationOnly={isMissionDonationOnly} onToggleMissionDonationOnly={toggleMissionDonationOnly} />
-        ) : view === 'sentiment' ? (
-          <SentimentTracker key="senti-comp-last" />
-        ) : view === 'chatbot' ? (
-          <HamsterChatBot key="chatbot-comp-last" />
-        ) : view === 'pinball' ? (
-          <PinballGame key="pinball-comp-last" />
-        ) : view === 'rating' ? (
-          <RatingBoard key="rating-comp-last" user={user!} />
-                      ) : view === 'pok_roulette' ? (
-                        <RouletteGame key="pok-roul-comp-last" user={user!} isPokMode={true} />
-                        ) : view === 'feedback' ? (
-                          <FeedbackBoard user={user!} />
-        ) : (
-          <RouletteGame key="roul-comp-last" user={user!} />
-        )}
+          {view === 'dashboard' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {(user.role === 'admin' || user.role === 'host') && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', gap: '10px' }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    background: isAutoAccept ? '#00ffa322' : '#222',
+                    padding: '10px 20px',
+                    borderRadius: '15px',
+                    border: `1px solid ${isAutoAccept ? '#00ffa3' : '#333'}`,
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 900,
+                    color: isAutoAccept ? '#00ffa3' : '#888',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input type="checkbox" checked={isAutoAccept} onChange={toggleAutoAccept} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
+                    {isAutoAccept ? '⚡️ 미션 자동 수락 모드 ON' : '⏸️ 미션 수동 수락 모드'}
+                  </label>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    background: isMissionDonationOnly ? '#ffbd2e22' : '#222',
+                    padding: '10px 20px',
+                    borderRadius: '15px',
+                    border: `1px solid ${isMissionDonationOnly ? '#ffbd2e' : '#333'}`,
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 900,
+                    color: isMissionDonationOnly ? '#ffbd2e' : '#888',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input type="checkbox" checked={isMissionDonationOnly} onChange={toggleMissionDonationOnly} style={{ cursor: 'pointer', width: '18px', height: '18px' }} />
+                    {isMissionDonationOnly ? '💰 도네이션 미션만 수신 중' : '💬 모든 채팅 미션 수신 중'}
+                  </label>
+                </div>
+              )}
+              <AnimatePresence>
+                {(() => {
+                  const mainMissions = missions.filter(m => m.type !== 'rogada');
+                  // 내용 기준 중복 그룹핑
+                  const grouped = new Map<string, any[]>();
+                  mainMissions.forEach(m => {
+                    const key = (m.content.startsWith('!미션 ') ? m.content.replace('!미션 ', '') : m.content).trim().toLowerCase();
+                    if (!grouped.has(key)) grouped.set(key, []);
+                    grouped.get(key)!.push(m);
+                  });
+                  return Array.from(grouped.values()).map(group => (
+                    <MissionCard key={group[0].id} mission={group[0]} count={group.length} onUpdate={updateStatus} onDelete={() => { group.forEach(m => deleteMission(m.id)); }} onGoLadder={() => setView('ladder')} />
+                  ));
+                })()}
+              </AnimatePresence>
+            </div>
+          ) : view === 'ladder' ? (
+            <LadderGame key="lad-comp-last" />
+          ) : view === 'group' ? (
+            <GroupMissionBoard key="grp-board-last" missions={missions} onUpdate={updateStatus} onDelete={deleteMission} user={user!} isAutoAccept={isAutoAccept} onToggleAutoAccept={toggleAutoAccept} isMissionDonationOnly={isMissionDonationOnly} onToggleMissionDonationOnly={toggleMissionDonationOnly} />
+          ) : view === 'sentiment' ? (
+            <SentimentTracker key="senti-comp-last" />
+          ) : view === 'chatbot' ? (
+            <HamsterChatBot key="chatbot-comp-last" />
+          ) : view === 'pinball' ? (
+            <PinballGame key="pinball-comp-last" />
+          ) : view === 'rating' ? (
+            <RatingBoard key="rating-comp-last" user={user!} />
+          ) : view === 'pok_roulette' ? (
+            <RouletteGame key="pok-roul-comp-last" user={user!} isPokMode={true} />
+          ) : view === 'feedback' ? (
+            <FeedbackBoard user={user!} />
+          ) : (
+            <RouletteGame key="roul-comp-last" user={user!} />
+          )}
         </div>
       </div>
     </div>
@@ -472,10 +472,10 @@ const MissionCard: React.FC<{ mission: any, count?: number, onUpdate: (id: strin
     <motion.div layout initial={{ x: -20, opacity: 0 }}
       animate={effect === 'success' ? { scale: 1.05, background: '#00ffa3', color: '#000' } : effect === 'failure' ? { x: [-5, 5, -5, 5, 0], backgroundColor: '#ff4b4b' } : effect === 'accepted' ? { scale: [1, 1.05, 1], borderColor: '#00ffa3' } : effect === 'rejected' ? { x: -100, opacity: 0 } : { x: 0, opacity: 1, scale: 1 }}
       exit={{ opacity: 0, x: 50 }}
-      style={{ 
+      style={{
         minHeight: '65px', width: '100%', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: '#080808', borderRadius: '12px', boxSizing: 'border-box',
-        border: (effect === 'accepted' || mission.status === 'accepted') ? '2px solid #00ffa3' : (isLadder ? '2px solid #ffbd2e' : '2px solid #222') 
+        border: (effect === 'accepted' || mission.status === 'accepted') ? '2px solid #00ffa3' : (isLadder ? '2px solid #ffbd2e' : '2px solid #222')
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, overflow: 'hidden' }}>
@@ -565,7 +565,7 @@ const LadderGame: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const WIDTH = 1200; const HEIGHT = 960; const ROW_COUNT = 30;
-  const PATH_COLORS = ['#ff4d4d','#4d9fff','#00ffa3','#ff9f4d','#c44dff','#ffee4d','#ff4dab','#4dffd6','#ff6b4d','#4dffb8','#a04dff','#ffbd2e'];
+  const PATH_COLORS = ['#ff4d4d', '#4d9fff', '#00ffa3', '#ff9f4d', '#c44dff', '#ffee4d', '#ff4dab', '#4dffd6', '#ff6b4d', '#4dffb8', '#a04dff', '#ffbd2e'];
   const generateBridges = () => { const newBridges: { row: number, col: number }[] = []; for (let r = 2; r < ROW_COUNT - 2; r++) { for (let c = 0; c < count - 1; c++) { if (Math.random() > 0.72) { if (!newBridges.some(b => b.row === r && (b.col === c - 1 || b.col === c + 1))) { newBridges.push({ row: r, col: c }); } } } } setBridges(newBridges); setActivePaths([]); setShowResult(null); setShowAllResults(null); };
   useEffect(() => generateBridges(), [count]);
   useEffect(() => {
@@ -815,13 +815,13 @@ const SPRITE_SCALE = DISP_W / SPRITE_CELL_W;
 const DISP_H = Math.round(346 * SPRITE_SCALE); // 모든 행 공통 고정 높이 (normal 기준)
 
 const SPRITE_ROWS = {
-  normal: { y: 43,   h: 346 }, // 기본
-  angry:  { y: 421,  h: 322 }, // 화남
-  sad:    { y: 765,  h: 293 }, // 슬픔
-  happy:  { y: 1068, h: 304 }, // 행복
-  wink:   { y: 1385, h: 303 }, // 윙크
-  walkL:  { y: 1695, h: 299 }, // 왼쪽이동
-  walkR:  { y: 2010, h: 294 }, // 오른쪽이동
+  normal: { y: 43, h: 346 }, // 기본
+  angry: { y: 421, h: 322 }, // 화남
+  sad: { y: 765, h: 293 }, // 슬픔
+  happy: { y: 1068, h: 304 }, // 행복
+  wink: { y: 1385, h: 303 }, // 윙크
+  walkL: { y: 1695, h: 299 }, // 왼쪽이동
+  walkR: { y: 2010, h: 294 }, // 오른쪽이동
 } as const;
 
 type SpriteRow = keyof typeof SPRITE_ROWS;
@@ -881,7 +881,7 @@ const HamsterOverlay: React.FC = () => {
   const cheeseEnabledRef = useRef(false);
   const INACTIVE_MS = 60000;
 
-  const triggerCheeseRef = useRef((_nickname: string) => {});
+  const triggerCheeseRef = useRef((_nickname: string) => { });
   triggerCheeseRef.current = (nickname: string) => {
     const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
     cheeseRandoms.current.set(nickname, rnd);
@@ -931,7 +931,7 @@ const HamsterOverlay: React.FC = () => {
 
   // 랜덤 이동 + 표정
   useEffect(() => {
-    const IDLE_EXPRS: Array<'normal'|'angry'|'sad'|'happy'|'wink'> = ['normal','normal','happy','angry','sad','wink'];
+    const IDLE_EXPRS: Array<'normal' | 'angry' | 'sad' | 'happy' | 'wink'> = ['normal', 'normal', 'happy', 'angry', 'sad', 'wink'];
     const t = setInterval(() => {
       setHamsters(prev => {
         const next = new Map(prev);
@@ -1091,20 +1091,22 @@ const HamsterOverlay: React.FC = () => {
                 )}
               </AnimatePresence>
               {/* 치즈 낙하 아이콘 */}
-              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
-                <motion.div
-                  key={h.nickname + '-cheese'}
-                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
-                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
-                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
-                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
-                  {r.icon}
-                </motion.div>
-              ); })()}
+              {cheeseTargets.has(h.nickname) && (() => {
+                const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                  <motion.div
+                    key={h.nickname + '-cheese'}
+                    initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                    animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                    transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                    style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                    {r.icon}
+                  </motion.div>
+                );
+              })()}
               <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
                 {h.nickname}
               </div>
-              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
+              <motion.div animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
@@ -1131,21 +1133,23 @@ const HamsterOverlay: React.FC = () => {
                 )}
               </AnimatePresence>
               {/* 치즈 낙하 아이콘 */}
-              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
-                <motion.div
-                  key={h.nickname + '-cheese'}
-                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
-                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
-                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
-                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
-                  {r.icon}
-                </motion.div>
-              ); })()}
+              {cheeseTargets.has(h.nickname) && (() => {
+                const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                  <motion.div
+                    key={h.nickname + '-cheese'}
+                    initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                    animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                    transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                    style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                    {r.icon}
+                  </motion.div>
+                );
+              })()}
               {/* 도네이션 닉네임 (주석): color '#ffbd2e', 💰 {h.nickname} */}
               <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px' }}>
                 {h.nickname}
               </div>
-              <motion.div animate={{ y: h.isWalking ? [0,-3,0,-3,0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
+              <motion.div animate={{ y: h.isWalking ? [0, -3, 0, -3, 0] : 0, scale: spriteRow === 'normal' ? 0.9 : 1 }} transition={h.isWalking ? { duration: 0.72, repeat: Infinity, scale: { duration: 0 } } : { duration: 0.2, scale: { duration: 0 } }}>
                 <HamsterSprite colorIdx={h.colorIdx} row={spriteRow} frame={walkFrame} />
               </motion.div>
             </motion.div>
@@ -1200,7 +1204,7 @@ const HamsterChatBot: React.FC = () => {
   const STAGE_W = 860;
   const INACTIVE_MS = 60000;
 
-  const triggerCheeseRef = useRef((_nickname: string) => {});
+  const triggerCheeseRef = useRef((_nickname: string) => { });
   triggerCheeseRef.current = (nickname: string) => {
     const rnd = { x: (Math.random() - 0.5) * 80, rotate: (Math.random() - 0.5) * 140, size: 0.8 + Math.random() * 0.2, icon: '🧀' };
     cheeseRandoms.current.set(nickname, rnd);
@@ -1455,16 +1459,18 @@ const HamsterChatBot: React.FC = () => {
               </AnimatePresence>
 
               {/* 치즈 낙하 아이콘 */}
-              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
-                <motion.div
-                  key={h.nickname + '-cheese'}
-                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
-                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
-                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
-                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
-                  {r.icon}
-                </motion.div>
-              ); })()}
+              {cheeseTargets.has(h.nickname) && (() => {
+                const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                  <motion.div
+                    key={h.nickname + '-cheese'}
+                    initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                    animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                    transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                    style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                    {r.icon}
+                  </motion.div>
+                );
+              })()}
               {/* 닉네임 — 스프라이트 위에 표시 */}
               <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black, 0 1px 2px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px', letterSpacing: '0.02em' }}>
                 {h.nickname}
@@ -1506,16 +1512,18 @@ const HamsterChatBot: React.FC = () => {
                 )}
               </AnimatePresence>
               {/* 치즈 낙하 아이콘 */}
-              {cheeseTargets.has(h.nickname) && (() => { const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
-                <motion.div
-                  key={h.nickname + '-cheese'}
-                  initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
-                  animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
-                  transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
-                  style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
-                  {r.icon}
-                </motion.div>
-              ); })()}
+              {cheeseTargets.has(h.nickname) && (() => {
+                const r = cheeseRandoms.current.get(h.nickname) ?? { x: 0, rotate: 0, size: 1, icon: '🧀' }; return (
+                  <motion.div
+                    key={h.nickname + '-cheese'}
+                    initial={{ x: r.x, y: -150, rotate: r.rotate, opacity: 1, scale: 1.3 }}
+                    animate={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 }}
+                    transition={{ duration: 1.36, ease: 'easeIn', opacity: { duration: 0.1, delay: 1.26, ease: 'linear' }, scale: { duration: 0.1, delay: 1.26, ease: 'linear' } }}
+                    style={{ position: 'absolute', bottom: `${Math.round(DISP_H * 0.6) - 20}px`, left: '50%', marginLeft: '-0.65rem', fontSize: `${r.size * 1.3}rem`, lineHeight: 1, zIndex: 20, pointerEvents: 'none' }}>
+                    {r.icon}
+                  </motion.div>
+                );
+              })()}
               {/* 도네이션 닉네임 (주석): color '#ffbd2e', 💰 {h.nickname} */}
               <div style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 900, textShadow: '0 0 4px black, 0 0 8px black, 0 1px 2px black', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', marginBottom: '4px', letterSpacing: '0.02em' }}>
                 {h.nickname}
@@ -1953,11 +1961,11 @@ const RouletteGame: React.FC<{ user: UserAuth, isPokMode?: boolean }> = ({ user,
                   </div>
                 ) : (
                   <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
-                        <button onClick={() => setItems(prev => prev.map((x, i) => i === idx && x.weight > 1 ? { ...x, weight: x.weight - 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>−</button>
-                        <span style={{ color: colors[idx % colors.length], fontWeight: 900, minWidth: '28px', textAlign: 'center', fontSize: '0.85rem' }}>×{it.weight}</span>
-                        <button onClick={() => setItems(prev => prev.map((x, i) => i === idx ? { ...x, weight: x.weight + 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>+</button>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}>
+                      <button onClick={() => setItems(prev => prev.map((x, i) => i === idx && x.weight > 1 ? { ...x, weight: x.weight - 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>−</button>
+                      <span style={{ color: colors[idx % colors.length], fontWeight: 900, minWidth: '28px', textAlign: 'center', fontSize: '0.85rem' }}>×{it.weight}</span>
+                      <button onClick={() => setItems(prev => prev.map((x, i) => i === idx ? { ...x, weight: x.weight + 1 } : x))} style={{ background: '#222', border: 'none', color: '#aaa', cursor: 'pointer', width: '22px', height: '22px', borderRadius: '4px', fontWeight: 900, fontSize: '1rem' }}>+</button>
+                    </div>
                     <Trash2 size={16} color="#ff4b4b" style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => setItems(items.filter((_, i) => i !== idx))} />
                   </>
                 )}
@@ -2234,11 +2242,21 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   };
 
   // 대결 수락/거절
-  const handleBattleAction = async (battleId: string, action: 'accept' | 'reject') => {
+  const handleBattleAction = async (battleId: string, action: string, extra?: object) => {
     await fetch(`${API}/rating/battle/${battleId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action })
+      body: JSON.stringify({ action, ...extra })
+    });
+    fetchRating();
+  };
+
+  // 난입 신청
+  const handleIntrude = async (battleId: string, intruderId: string) => {
+    await fetch(`${API}/rating/battle/${battleId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'intrude', intruderId })
     });
     fetchRating();
   };
@@ -2330,8 +2348,12 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
             const rank = idx + 1;
             const winRate = char.wins + char.losses > 0 ? Math.round(char.wins / (char.wins + char.losses) * 100) : 0;
             const isOnFire = (char.winStreak || 0) >= 5;
+            const isGangJunActive = char.memberName === '갱쥰' && battles.some(b =>
+              ['pending', 'accepted'].includes(b.status) &&
+              (b.challengerId === char.id || b.defenderId === char.id)
+            );
             return (
-              <div key={char.id} className={isOnFire ? 'fire-streak' : ''} style={{
+              <div key={char.id} className={isGangJunActive ? 'blue-fire-streak' : isOnFire ? 'fire-streak' : ''} style={{
                 background: rank === 1 ? `${cfg.bg}, linear-gradient(90deg, ${cfg.color}11 0%, transparent 100%)` : '#0d0d0d',
                 border: `1px solid ${rank <= 3 ? cfg.color + '44' : '#1a1a1a'}`,
                 borderRadius: '12px', padding: '16px 20px',
@@ -2381,6 +2403,13 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                     <span>승률 {winRate}%</span>
                     {isOnFire && <span style={{ color: '#ff6a00', fontWeight: 900 }}>🔥 {char.winStreak}연승</span>}
                   </div>
+                  {isGangJunActive && (
+                    <div style={{ marginTop: '6px', fontSize: '0.72rem', fontWeight: 900, color: '#00cfff', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                      <span>🔥</span>
+                      <span>주의! 어둠의 갱맨은 점수를 500점 이상 내려주세요. 너무 강력한 상대입니다.</span>
+                      <span>🔥</span>
+                    </div>
+                  )}
                 </div>
                 {/* 점수(고정) + 레이팅 */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', minWidth: '130px' }}>
@@ -2445,7 +2474,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                 {/* 대결 신청 버튼 (본인 캐릭터 아닌 경우) */}
                 {char.memberName !== user.name && myLeagueChar && char.id !== myLeagueChar.id && (() => {
                   const hasOngoing = battles.some(b =>
-                    ['pending','accepted'].includes(b.status) &&
+                    ['pending', 'accepted'].includes(b.status) &&
                     ([b.challengerId, b.defenderId].includes(myLeagueChar.id)) &&
                     ([b.challengerId, b.defenderId].includes(char.id))
                   );
@@ -2488,13 +2517,39 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
           </div>
           {battleListOpen && <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {leagueBattles.map(b => {
-              const isPending   = b.status === 'pending';
-              const isAccepted  = b.status === 'accepted';
+              const isPending = b.status === 'pending';
+              const isIntrusionPending = b.status === 'intrusion_pending';
+              const isTripleAccepted = b.status === 'triple_accepted';
+              const isAccepted = b.status === 'accepted';
               const isCompleted = b.status === 'completed';
-              const _isRejected  = b.status === 'rejected'; void _isRejected;
-              const isDefender  = b.defenderMember === user.name;
-              const statusColor = isPending ? '#f59e0b' : isAccepted ? '#60a5fa' : isCompleted ? '#4ade80' : '#555';
-              const statusLabel = isPending ? '신청 중' : isAccepted ? '대결 수락됨' : isCompleted ? '완료' : '거절됨';
+              const isDefender = b.defenderMember === user.name;
+              const isChallenger = b.challengerMember === user.name;
+              const isIntruder = b.intruderMember === user.name;
+              const isParticipant = isChallenger || isDefender || isIntruder;
+
+              // 난입 가능 여부: pending 상태이고, 내 캐릭터가 있고, 이미 참여 중이 아닌 경우
+              const canIntrude = isPending && myLeagueChar &&
+                myLeagueChar.memberName !== b.challengerMember &&
+                myLeagueChar.memberName !== b.defenderMember;
+
+              const statusColor =
+                isPending ? '#f59e0b' :
+                  isIntrusionPending ? '#f97316' :
+                    isTripleAccepted ? '#a78bfa' :
+                      isAccepted ? '#60a5fa' :
+                        isCompleted ? '#4ade80' : '#555';
+              const statusLabel =
+                isPending ? '신청 중' :
+                  isIntrusionPending ? '⚡ 난입 신청' :
+                    isTripleAccepted ? '⚡ 3자 대결' :
+                      isAccepted ? '대결 수락됨' :
+                        isCompleted ? '완료' : '거절됨';
+
+              const winnerName = b.winnerId === b.challengerId ? b.challengerName
+                : b.winnerId === b.defenderId ? b.defenderName
+                  : b.intruderName;
+
+              const isSubmitting = submittingBattleId === b.id;
 
               return (
                 <div key={b.id} style={{ background: '#0d0d0d', border: `1px solid ${statusColor}33`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -2503,37 +2558,76 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
 
                   {/* 대결 정보 */}
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 900, color: b.winnerId === b.challengerId ? '#4ade80' : b.loserId === b.challengerId ? '#f87171' : '#fff' }}>{b.challengerName}</span>
-                    <span style={{ fontSize: '0.78rem', color: '#555' }}>({b.challengerMember})</span>
-                    <span style={{ color: '#444', fontWeight: 900 }}>vs</span>
-                    <span style={{ fontWeight: 900, color: b.winnerId === b.defenderId ? '#4ade80' : b.loserId === b.defenderId ? '#f87171' : '#fff' }}>{b.defenderName}</span>
-                    <span style={{ fontSize: '0.78rem', color: '#555' }}>({b.defenderMember})</span>
+                    {[
+                      { id: b.challengerId, name: b.challengerName, member: b.challengerMember },
+                      { id: b.defenderId, name: b.defenderName, member: b.defenderMember },
+                      ...(b.intruderId ? [{ id: b.intruderId, name: b.intruderName, member: b.intruderMember }] : [])
+                    ].map((p, i) => {
+                      const isWinner = b.winnerId === p.id;
+                      const isLoser = b.loserIds ? b.loserIds.includes(p.id) : b.loserId === p.id;
+                      return (
+                        <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {i > 0 && <span style={{ color: '#444', fontWeight: 900, margin: '0 2px' }}>vs</span>}
+                          <span style={{ fontWeight: 900, color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff' }}>{p.name}</span>
+                          <span style={{ fontSize: '0.78rem', color: '#555' }}>({p.member})</span>
+                          {i === 2 && !isCompleted && <span style={{ fontSize: '0.7rem', color: '#f97316', background: '#2a1500', border: '1px solid #f97316', borderRadius: '8px', padding: '1px 6px', marginLeft: '2px' }}>난입</span>}
+                        </span>
+                      );
+                    })}
                     {isCompleted && (
                       <span style={{ fontSize: '0.8rem', color: '#4ade80', fontWeight: 900 }}>
-                        🏆 {b.winnerId === b.challengerId ? b.challengerName : b.defenderName} 승리 · ±{b.ratingChange}점
+                        🏆 {winnerName} 승리 · {b.isTriple ? '승+50 / 패-20' : `±${b.ratingChange}점`}
                       </span>
                     )}
                   </div>
 
                   {/* 액션 버튼 */}
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    {/* 수락/거절 - 상대방 본인 or admin */}
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+
+                    {/* 1:1 수락/거절 */}
                     {isPending && (isDefender || isAdmin) && (
                       <>
                         <button onClick={() => handleBattleAction(b.id, 'accept')} style={{ background: '#1e3a5f', color: '#60a5fa', border: '1px solid #1d4ed8', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>✅ 수락</button>
                         <button onClick={() => handleBattleAction(b.id, 'reject')} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>❌ 거절</button>
                       </>
                     )}
-                    {/* 결과 입력 - 대결 참여 멤버 양쪽 or admin */}
-                    {isAccepted && (isAdmin || b.challengerMember === user.name || b.defenderMember === user.name) && (() => {
-                      const isSubmitting = submittingBattleId === b.id;
-                      return (
-                        <>
-                          <button disabled={isSubmitting} onClick={() => handleBattleResult(b.id, b.challengerId)} style={{ background: isSubmitting ? '#1a1a1a' : '#14532d', color: isSubmitting ? '#444' : '#4ade80', border: '1px solid #166534', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? '처리 중...' : `🏆 ${b.challengerName} 승`}</button>
-                          <button disabled={isSubmitting} onClick={() => handleBattleResult(b.id, b.defenderId)} style={{ background: isSubmitting ? '#1a1a1a' : '#14532d', color: isSubmitting ? '#444' : '#4ade80', border: '1px solid #166534', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? '처리 중...' : `🏆 ${b.defenderName} 승`}</button>
-                        </>
-                      );
-                    })()}
+
+                    {/* 난입 신청 버튼 */}
+                    {canIntrude && (
+                      <button onClick={() => handleIntrude(b.id, myLeagueChar!.id)} style={{ background: '#2a1500', color: '#f97316', border: '1px solid #f97316', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>⚡ 난입</button>
+                    )}
+
+                    {/* 난입 수락/거절 - 원래 참여자(challenger/defender) or admin */}
+                    {isIntrusionPending && (isChallenger || isDefender || isAdmin) && (
+                      <>
+                        <button onClick={() => handleBattleAction(b.id, 'accept_intrusion')} style={{ background: '#1e1a3f', color: '#a78bfa', border: '1px solid #7c3aed', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>⚡ 난입 수락</button>
+                        <button onClick={() => handleBattleAction(b.id, 'reject_intrusion')} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>❌ 난입 거절</button>
+                      </>
+                    )}
+
+                    {/* 3자 대결 결과 입력 */}
+                    {isTripleAccepted && (isAdmin || isParticipant) && (
+                      <>
+                        {[
+                          { id: b.challengerId, name: b.challengerName },
+                          { id: b.defenderId, name: b.defenderName },
+                          { id: b.intruderId, name: b.intruderName },
+                        ].map(p => (
+                          <button key={p.id} disabled={isSubmitting} onClick={() => handleBattleResult(b.id, p.id)} style={{ background: isSubmitting ? '#1a1a1a' : '#1e1a3f', color: isSubmitting ? '#444' : '#a78bfa', border: '1px solid #7c3aed', padding: '6px 10px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>
+                            {isSubmitting ? '...' : `🏆 ${p.name} 승`}
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* 1:1 결과 입력 */}
+                    {isAccepted && (isAdmin || isChallenger || isDefender) && (
+                      <>
+                        <button disabled={isSubmitting} onClick={() => handleBattleResult(b.id, b.challengerId)} style={{ background: isSubmitting ? '#1a1a1a' : '#14532d', color: isSubmitting ? '#444' : '#4ade80', border: '1px solid #166534', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? '처리 중...' : `🏆 ${b.challengerName} 승`}</button>
+                        <button disabled={isSubmitting} onClick={() => handleBattleResult(b.id, b.defenderId)} style={{ background: isSubmitting ? '#1a1a1a' : '#14532d', color: isSubmitting ? '#444' : '#4ade80', border: '1px solid #166534', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? '처리 중...' : `🏆 ${b.defenderName} 승`}</button>
+                      </>
+                    )}
+
                     {/* 삭제 - admin만 */}
                     {isAdmin && (
                       <button onClick={() => handleBattleDelete(b.id)} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>🗑 삭제</button>
@@ -2640,35 +2734,35 @@ const PinballGame: React.FC = () => {
 
   type Ball = { x: number; y: number; vx: number; vy: number; r: number; color: string; active: boolean; trail: { x: number; y: number }[]; name: string; slowFrames: number };
   type PendingBall = { name: string; color: string };
-  type PegObs     = { kind: 'peg';     x: number; y: number; r: number };
-  type BumperObs  = { kind: 'bumper';  x: number; y: number; r: number; label: string; pts: number; hitTime: number };
-  type RampObs    = { kind: 'ramp';    x1: number; y1: number; x2: number; y2: number };
+  type PegObs = { kind: 'peg'; x: number; y: number; r: number };
+  type BumperObs = { kind: 'bumper'; x: number; y: number; r: number; label: string; pts: number; hitTime: number };
+  type RampObs = { kind: 'ramp'; x1: number; y1: number; x2: number; y2: number };
   type SpinnerObs = { kind: 'spinner'; cx: number; cy: number; len: number; angle: number; speed: number };
   type Obstacle = PegObs | BumperObs | RampObs | SpinnerObs;
   type GoalSlot = { x: number; w: number; label: string; color: string; pts: number; count: number };
 
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const scrollRef  = useRef<HTMLDivElement>(null);
-  const ballsRef   = useRef<Ball[]>([]);
-  const obsRef     = useRef<Obstacle[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const ballsRef = useRef<Ball[]>([]);
+  const obsRef = useRef<Obstacle[]>([]);
   const pendingRef = useRef<PendingBall[]>([]);
-  const [pending, setPending]       = useState<PendingBall[]>([]);
+  const [pending, setPending] = useState<PendingBall[]>([]);
   const [newBallName, setNewBallName] = useState('');
   const [totalScore, setTotalScore] = useState(0);
-  const [ballCount, setBallCount]   = useState(0);
+  const [ballCount, setBallCount] = useState(0);
   const totalScoreRef = useRef(0);
   const [lastArrival, setLastArrival] = useState<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
-  const lastArrivedRef  = useRef<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
+  const lastArrivedRef = useRef<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
   const lastArrivalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 6 슬롯 — 가운데 JACKPOT
   const SLOT_W = Math.floor(CW / 6);
   const INIT_GOALS: GoalSlot[] = [
-    { x: 0,          w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
-    { x: SLOT_W,     w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
-    { x: SLOT_W * 2, w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
+    { x: 0, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
+    { x: SLOT_W, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
+    { x: SLOT_W * 2, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
     { x: SLOT_W * 3, w: SLOT_W, label: '💎JACKPOT', color: '#ffd700', pts: 1, count: 0 },
-    { x: SLOT_W * 4, w: SLOT_W, label: '꽝',        color: '#555',    pts: 0, count: 0 },
+    { x: SLOT_W * 4, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
     { x: SLOT_W * 5, w: CW - SLOT_W * 5, label: '꽝', color: '#555', pts: 0, count: 0 },
   ];
   const goalsRef = useRef<GoalSlot[]>(INIT_GOALS.map(g => ({ ...g })));
@@ -2677,13 +2771,13 @@ const PinballGame: React.FC = () => {
   // Build obstacles once
   useEffect(() => {
     const obs: Obstacle[] = [];
-    const wideXs  = [45, 125, 205, 285, 365, 445, 515];  // 7 pegs
+    const wideXs = [45, 125, 205, 285, 365, 445, 515];  // 7 pegs
     const narrowXs = [85, 165, 245, 325, 405, 480];       // 6 pegs
 
     // 구역별 장애물 구성
     // ── Zone 0: 진입 램프 (y 80~180) ──
-    obs.push({ kind: 'ramp', x1: 0,  y1: 80,  x2: 100, y2: 170 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 80,  x2: CW - 100, y2: 170 });
+    obs.push({ kind: 'ramp', x1: 0, y1: 80, x2: 100, y2: 170 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 80, x2: CW - 100, y2: 170 });
 
     // ── Zone 1: 첫 번째 핀 구역 (y 190~430) ──
     const z1rows = [190, 235, 280, 325, 370, 415];
@@ -2691,15 +2785,15 @@ const PinballGame: React.FC = () => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
-    obs.push({ kind: 'spinner', cx: 140, cy: 253, len: 38, angle: 0,            speed: 0.04 });
+    obs.push({ kind: 'spinner', cx: 140, cy: 253, len: 38, angle: 0, speed: 0.04 });
     obs.push({ kind: 'spinner', cx: 420, cy: 253, len: 38, angle: Math.PI / 2, speed: -0.04 });
 
     // ── Zone 2: 범퍼 구역 1 (y 460~640) ──
     obs.push({ kind: 'bumper', x: 140, y: 530, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 490, r: 32, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 490, r: 32, label: '💎', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 420, y: 530, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'ramp', x1: 0,  y1: 460, x2: 80,       y2: 500 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 460, x2: CW - 80,  y2: 500 });
+    obs.push({ kind: 'ramp', x1: 0, y1: 460, x2: 80, y2: 500 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 460, x2: CW - 80, y2: 500 });
     [590, 635].forEach((y, i) => {
       const xs = i % 2 === 0 ? narrowXs : wideXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
@@ -2713,9 +2807,9 @@ const PinballGame: React.FC = () => {
     });
 
     // ── Zone 4: 스피너 구역 (y 980~1150) ──
-    obs.push({ kind: 'spinner', cx: 100, cy: 1040, len: 45, angle: 0,              speed:  0.05 });
-    obs.push({ kind: 'spinner', cx: 280, cy: 1010, len: 45, angle: Math.PI / 3,    speed: -0.05 });
-    obs.push({ kind: 'spinner', cx: 460, cy: 1040, len: 45, angle: Math.PI * 0.7,  speed:  0.05 });
+    obs.push({ kind: 'spinner', cx: 100, cy: 1040, len: 45, angle: 0, speed: 0.05 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 1010, len: 45, angle: Math.PI / 3, speed: -0.05 });
+    obs.push({ kind: 'spinner', cx: 460, cy: 1040, len: 45, angle: Math.PI * 0.7, speed: 0.05 });
     [1090, 1135].forEach((y, i) => {
       const xs = i % 2 === 0 ? narrowXs : wideXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
@@ -2728,18 +2822,18 @@ const PinballGame: React.FC = () => {
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
     // Zone 5 중간 스피너 (속도 다양)
-    obs.push({ kind: 'spinner', cx:  80, cy: 1290, len: 36, angle: 0,            speed:  0.09 });
-    obs.push({ kind: 'spinner', cx: 280, cy: 1330, len: 50, angle: Math.PI*0.5,  speed: -0.03 });
-    obs.push({ kind: 'spinner', cx: 480, cy: 1290, len: 36, angle: Math.PI*0.8,  speed:  0.12 });
+    obs.push({ kind: 'spinner', cx: 80, cy: 1290, len: 36, angle: 0, speed: 0.09 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 1330, len: 50, angle: Math.PI * 0.5, speed: -0.03 });
+    obs.push({ kind: 'spinner', cx: 480, cy: 1290, len: 36, angle: Math.PI * 0.8, speed: 0.12 });
 
     // ── Zone 6: 범퍼 구역 2 (y 1530~1720) ──
-    obs.push({ kind: 'bumper', x:  80, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 80, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 185, y: 1555, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 1590, r: 30, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 1590, r: 30, label: '💎', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 375, y: 1555, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 480, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'ramp', x1: 0,  y1: 1530, x2: 55,       y2: 1570 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 1530, x2: CW - 55,  y2: 1570 });
+    obs.push({ kind: 'ramp', x1: 0, y1: 1530, x2: 55, y2: 1570 });
+    obs.push({ kind: 'ramp', x1: CW, y1: 1530, x2: CW - 55, y2: 1570 });
     [1660, 1710].forEach((y, i) => {
       const xs = i % 2 === 0 ? narrowXs : wideXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
@@ -2751,12 +2845,12 @@ const PinballGame: React.FC = () => {
       const xs = i % 2 === 0 ? wideXs : narrowXs;
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
-    obs.push({ kind: 'spinner', cx: 180, cy: 1867, len: 40, angle: 0,           speed: -0.04 });
-    obs.push({ kind: 'spinner', cx: 380, cy: 1867, len: 40, angle: Math.PI/2,  speed:  0.04 });
+    obs.push({ kind: 'spinner', cx: 180, cy: 1867, len: 40, angle: 0, speed: -0.04 });
+    obs.push({ kind: 'spinner', cx: 380, cy: 1867, len: 40, angle: Math.PI / 2, speed: 0.04 });
     // Zone 7 추가 스피너 (빠른 것 / 느린 것 혼합)
-    obs.push({ kind: 'spinner', cx: 280, cy: 1960, len: 55, angle: Math.PI*0.3, speed: -0.10 });
-    obs.push({ kind: 'spinner', cx:  60, cy: 2000, len: 32, angle: Math.PI*0.7, speed:  0.15 });
-    obs.push({ kind: 'spinner', cx: 500, cy: 2000, len: 32, angle: Math.PI*1.2, speed: -0.07 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 1960, len: 55, angle: Math.PI * 0.3, speed: -0.10 });
+    obs.push({ kind: 'spinner', cx: 60, cy: 2000, len: 32, angle: Math.PI * 0.7, speed: 0.15 });
+    obs.push({ kind: 'spinner', cx: 500, cy: 2000, len: 32, angle: Math.PI * 1.2, speed: -0.07 });
 
     // ── Zone 8: 다섯 번째 핀 구역 (y 2065~2330) ──
     const z8rows = [2065, 2110, 2155, 2200, 2245, 2290, 2335];
@@ -2765,14 +2859,14 @@ const PinballGame: React.FC = () => {
       xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
     });
     // Zone 8 중간 스피너 (속도 다양)
-    obs.push({ kind: 'spinner', cx: 140, cy: 2170, len: 42, angle: Math.PI*0.2,  speed:  0.08 });
-    obs.push({ kind: 'spinner', cx: 420, cy: 2170, len: 42, angle: Math.PI*1.1,  speed: -0.13 });
-    obs.push({ kind: 'spinner', cx: 280, cy: 2260, len: 48, angle: Math.PI*0.6,  speed:  0.05 });
+    obs.push({ kind: 'spinner', cx: 140, cy: 2170, len: 42, angle: Math.PI * 0.2, speed: 0.08 });
+    obs.push({ kind: 'spinner', cx: 420, cy: 2170, len: 42, angle: Math.PI * 1.1, speed: -0.13 });
+    obs.push({ kind: 'spinner', cx: 280, cy: 2260, len: 48, angle: Math.PI * 0.6, speed: 0.05 });
 
     // ── Zone 9: 범퍼 구역 3 + 마지막 핀 (y 2360~2600) ──
     obs.push({ kind: 'bumper', x: 100, y: 2390, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 210, y: 2360, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 2400, r: 30, label: '💎',   pts: 0, hitTime: 0 });
+    obs.push({ kind: 'bumper', x: 280, y: 2400, r: 30, label: '💎', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 350, y: 2360, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     obs.push({ kind: 'bumper', x: 460, y: 2390, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
     const z9rows = [2450, 2495, 2540, 2585, 2630];
@@ -2782,11 +2876,11 @@ const PinballGame: React.FC = () => {
     });
 
     // ── 골 근처 대형 스피너 2개 (좌/우) ──
-    obs.push({ kind: 'spinner', cx: 185, cy: 2700, len: 110, angle: 0,         speed: -0.06 });
-    obs.push({ kind: 'spinner', cx: 430, cy: 2700, len: 110, angle: Math.PI/2, speed:  0.06 });
+    obs.push({ kind: 'spinner', cx: 185, cy: 2700, len: 110, angle: 0, speed: -0.06 });
+    obs.push({ kind: 'spinner', cx: 430, cy: 2700, len: 110, angle: Math.PI / 2, speed: 0.06 });
 
     // ── 최종 깔때기 램프 (y 2670~2750) ──
-    obs.push({ kind: 'ramp', x1: 0,  y1: 2660, x2: SLOT_W * 3,       y2: 2740 });
+    obs.push({ kind: 'ramp', x1: 0, y1: 2660, x2: SLOT_W * 3, y2: 2740 });
     obs.push({ kind: 'ramp', x1: CW, y1: 2660, x2: SLOT_W * 3 + SLOT_W, y2: 2740 });
 
     obsRef.current = obs;
@@ -2835,7 +2929,7 @@ const PinballGame: React.FC = () => {
 
     // ─── Update physics ───
     const MAX_SPEED = 15;
-    const SUBSTEPS  = 2;
+    const SUBSTEPS = 2;
     const update = () => {
       const now = Date.now();
       // Rotate spinners (1회만)
@@ -2854,15 +2948,15 @@ const PinballGame: React.FC = () => {
         for (let step = 0; step < SUBSTEPS; step++) {
           ball.vy += GRAVITY / SUBSTEPS;
           ball.vx *= Math.pow(0.999, 1 / SUBSTEPS);
-          ball.x  += ball.vx / SUBSTEPS;
-          ball.y  += ball.vy / SUBSTEPS;
+          ball.x += ball.vx / SUBSTEPS;
+          ball.y += ball.vy / SUBSTEPS;
 
           // 최대 속도 제한
           const spd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
           if (spd > MAX_SPEED) { ball.vx = ball.vx / spd * MAX_SPEED; ball.vy = ball.vy / spd * MAX_SPEED; }
 
           // Wall bounce
-          if (ball.x - ball.r < 0)  { ball.x = ball.r; ball.vx = Math.abs(ball.vx) * 0.65; }
+          if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = Math.abs(ball.vx) * 0.65; }
           if (ball.x + ball.r > CW) { ball.x = CW - ball.r; ball.vx = -Math.abs(ball.vx) * 0.65; }
 
           // Obstacles

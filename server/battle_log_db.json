@@ -20,6 +20,65 @@
       "wins": 0,
       "losses": 0,
       "deletedAt": "2026-04-13T12:59:51.168Z"
+    },
+    {
+      "type": "register",
+      "characterId": "1776167914232_a3a7d",
+      "memberName": "갱쥰",
+      "characterName": "갱쥰",
+      "jobName": "달소",
+      "league": "4000",
+      "score": 5000,
+      "registeredAt": "2026-04-14T11:58:34.232Z"
+    },
+    {
+      "type": "register",
+      "characterId": "1776169132455_dx68h",
+      "memberName": "찌모",
+      "characterName": "슈퍼찌모",
+      "jobName": "갈증",
+      "league": "4000",
+      "score": 5000,
+      "registeredAt": "2026-04-14T12:18:52.455Z"
+    },
+    {
+      "type": "deleted",
+      "battleId": "b_1776169179962_i1e1",
+      "league": "4000",
+      "challengerName": "슈퍼찌모",
+      "challengerMember": "찌모",
+      "defenderName": "갱쥰",
+      "defenderMember": "갱쥰",
+      "originalStatus": "rejected",
+      "winnerId": null,
+      "winnerName": null,
+      "ratingChange": 20,
+      "deletedAt": "2026-04-14T12:19:48.062Z"
+    },
+    {
+      "type": "register",
+      "characterId": "1776171078564_ep5za",
+      "memberName": "서씨",
+      "characterName": "서씨가문의수치",
+      "jobName": "알카",
+      "league": "4000",
+      "score": 4000,
+      "registeredAt": "2026-04-14T12:51:18.564Z"
+    },
+    {
+      "type": "result_triple",
+      "battleId": "b_1776171134811_2zn5",
+      "league": "4000",
+      "challengerName": "갱쥰",
+      "challengerMember": "갱쥰",
+      "defenderName": "슈퍼찌모",
+      "defenderMember": "찌모",
+      "intruderName": "서씨가문의수치",
+      "intruderMember": "서씨",
+      "winnerName": "갱쥰",
+      "winnerMember": "갱쥰",
+      "winnerRatingAfter": 1050,
+      "recordedAt": "2026-04-14T12:55:30.159Z"
     }
   ]
 }

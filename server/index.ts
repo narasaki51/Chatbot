@@ -745,10 +745,10 @@ app.post('/rating/battle', (req, res) => {
   res.json({ success: true, battle });
 });
 
-// 대결 수락 / 거절 / 결과
+// 대결 수락 / 거절 / 결과 / 난입
 app.patch('/rating/battle/:id', (req, res) => {
-  const { action, winnerId } = req.body;
-  // action: 'accept' | 'reject' | 'result'
+  const { action, winnerId, intruderId } = req.body;
+  // action: 'accept' | 'reject' | 'result' | 'intrude' | 'accept_intrusion' | 'reject_intrusion'
   const db = ensureBattles(getRatingDB());
   const battle = db.battles.find((b: any) => b.id === req.params.id);
   if (!battle) return res.status(404).json({ success: false, message: '대결 없음' });
@@ -761,40 +761,101 @@ app.patch('/rating/battle/:id', (req, res) => {
     battle.status = 'rejected';
     battle.updatedAt = new Date().toISOString();
 
-  } else if (action === 'result') {
-    if (!winnerId) return res.status(400).json({ success: false, message: 'winnerId 필요' });
-    const loserId = winnerId === battle.challengerId ? battle.defenderId : battle.challengerId;
+  } else if (action === 'intrude') {
+    if (battle.status !== 'pending') return res.status(400).json({ success: false, message: '신청 중인 대결에만 난입 가능' });
+    if (!intruderId) return res.status(400).json({ success: false, message: 'intruderId 필요' });
+    const intruder = db.characters.find((c: any) => c.id === intruderId);
+    if (!intruder) return res.status(404).json({ success: false, message: '캐릭터 없음' });
+    if (intruder.league !== battle.league) return res.status(400).json({ success: false, message: '같은 리그끼리만 가능' });
+    if ([battle.challengerId, battle.defenderId].includes(intruderId)) return res.status(400).json({ success: false, message: '이미 대결 중인 캐릭터' });
+    battle.intruderId     = intruderId;
+    battle.intruderName   = intruder.characterName;
+    battle.intruderMember = intruder.memberName;
+    battle.status         = 'intrusion_pending';
+    battle.updatedAt      = new Date().toISOString();
 
-    const winner = db.characters.find((c: any) => c.id === winnerId);
-    const loser  = db.characters.find((c: any) => c.id === loserId);
-    if (!winner || !loser) return res.status(404).json({ success: false, message: '캐릭터 없음' });
-
-    winner.wins      += 1;
-    winner.rating    += battle.ratingChange;
-    winner.winStreak  = (winner.winStreak || 0) + 1;
-    loser.losses     += 1;
-    loser.rating      = Math.max(0, loser.rating - battle.ratingChange);
-    loser.winStreak   = 0;
-
-    battle.status   = 'completed';
-    battle.winnerId = winnerId;
-    battle.loserId  = loserId;
+  } else if (action === 'accept_intrusion') {
+    if (battle.status !== 'intrusion_pending') return res.status(400).json({ success: false, message: '난입 대기 상태가 아님' });
+    battle.status    = 'triple_accepted';
     battle.updatedAt = new Date().toISOString();
 
-    // 대전 기록 별도 저장
-    appendBattleLog({
-      type: 'result',
-      battleId: battle.id,
-      league: battle.league,
-      challengerName: battle.challengerName, challengerMember: battle.challengerMember,
-      defenderName: battle.defenderName,     defenderMember: battle.defenderMember,
-      winnerName: winner.characterName,      winnerMember: winner.memberName,
-      loserName: loser.characterName,        loserMember: loser.memberName,
-      ratingChange: battle.ratingChange,
-      winnerRatingAfter: winner.rating,
-      loserRatingAfter: loser.rating,
-      recordedAt: new Date().toISOString()
-    });
+  } else if (action === 'reject_intrusion') {
+    if (battle.status !== 'intrusion_pending') return res.status(400).json({ success: false, message: '난입 대기 상태가 아님' });
+    delete battle.intruderId;
+    delete battle.intruderName;
+    delete battle.intruderMember;
+    battle.status    = 'pending';
+    battle.updatedAt = new Date().toISOString();
+
+  } else if (action === 'result') {
+    if (!winnerId) return res.status(400).json({ success: false, message: 'winnerId 필요' });
+
+    // 3자 대결
+    if (battle.status === 'triple_accepted') {
+      const allIds = [battle.challengerId, battle.defenderId, battle.intruderId];
+      const loserIds = allIds.filter((id: string) => id !== winnerId);
+      const winner = db.characters.find((c: any) => c.id === winnerId);
+      const losers = loserIds.map((id: string) => db.characters.find((c: any) => c.id === id)).filter(Boolean);
+      if (!winner) return res.status(404).json({ success: false, message: '캐릭터 없음' });
+
+      winner.wins     += 1;
+      winner.rating   += 50;
+      winner.winStreak = (winner.winStreak || 0) + 1;
+      for (const loser of losers) {
+        loser.losses   += 1;
+        loser.rating    = Math.max(0, loser.rating - 20);
+        loser.winStreak = 0;
+      }
+
+      battle.status     = 'completed';
+      battle.winnerId   = winnerId;
+      battle.loserId    = loserIds[0];
+      battle.loserIds   = loserIds;
+      battle.isTriple   = true;
+      battle.ratingChange = 50;
+      battle.updatedAt  = new Date().toISOString();
+
+      appendBattleLog({
+        type: 'result_triple', battleId: battle.id, league: battle.league,
+        challengerName: battle.challengerName, challengerMember: battle.challengerMember,
+        defenderName: battle.defenderName,     defenderMember: battle.defenderMember,
+        intruderName: battle.intruderName,     intruderMember: battle.intruderMember,
+        winnerName: winner.characterName,      winnerMember: winner.memberName,
+        winnerRatingAfter: winner.rating,
+        recordedAt: new Date().toISOString()
+      });
+
+    // 1:1 대결
+    } else {
+      const loserId = winnerId === battle.challengerId ? battle.defenderId : battle.challengerId;
+      const winner = db.characters.find((c: any) => c.id === winnerId);
+      const loser  = db.characters.find((c: any) => c.id === loserId);
+      if (!winner || !loser) return res.status(404).json({ success: false, message: '캐릭터 없음' });
+
+      winner.wins      += 1;
+      winner.rating    += battle.ratingChange;
+      winner.winStreak  = (winner.winStreak || 0) + 1;
+      loser.losses     += 1;
+      loser.rating      = Math.max(0, loser.rating - battle.ratingChange);
+      loser.winStreak   = 0;
+
+      battle.status   = 'completed';
+      battle.winnerId = winnerId;
+      battle.loserId  = loserId;
+      battle.updatedAt = new Date().toISOString();
+
+      appendBattleLog({
+        type: 'result', battleId: battle.id, league: battle.league,
+        challengerName: battle.challengerName, challengerMember: battle.challengerMember,
+        defenderName: battle.defenderName,     defenderMember: battle.defenderMember,
+        winnerName: winner.characterName,      winnerMember: winner.memberName,
+        loserName: loser.characterName,        loserMember: loser.memberName,
+        ratingChange: battle.ratingChange,
+        winnerRatingAfter: winner.rating,
+        loserRatingAfter: loser.rating,
+        recordedAt: new Date().toISOString()
+      });
+    }
   }
 
   saveRatingDB(db);
@@ -809,11 +870,20 @@ app.delete('/rating/battle/:id', (req, res) => {
   if (!battle) return res.status(404).json({ success: false, message: '대결 없음' });
 
   // 완료된 대결이면 승패/레이팅 원복
-  if (battle.status === 'completed' && battle.winnerId && battle.loserId) {
+  if (battle.status === 'completed' && battle.winnerId) {
     const winner = db.characters.find((c: any) => c.id === battle.winnerId);
-    const loser  = db.characters.find((c: any) => c.id === battle.loserId);
-    if (winner) { winner.wins = Math.max(0, winner.wins - 1); winner.rating = Math.max(0, winner.rating - battle.ratingChange); }
-    if (loser)  { loser.losses = Math.max(0, loser.losses - 1); loser.rating += battle.ratingChange; }
+    if (battle.isTriple) {
+      if (winner) { winner.wins = Math.max(0, winner.wins - 1); winner.rating = Math.max(0, winner.rating - 50); }
+      const loserIds = battle.loserIds || [battle.loserId];
+      for (const lid of loserIds) {
+        const loser = db.characters.find((c: any) => c.id === lid);
+        if (loser) { loser.losses = Math.max(0, loser.losses - 1); loser.rating += 20; }
+      }
+    } else {
+      const loser = db.characters.find((c: any) => c.id === battle.loserId);
+      if (winner) { winner.wins = Math.max(0, winner.wins - 1); winner.rating = Math.max(0, winner.rating - battle.ratingChange); }
+      if (loser)  { loser.losses = Math.max(0, loser.losses - 1); loser.rating += battle.ratingChange; }
+    }
   }
 
   // 삭제 기록 별도 저장

@@ -177,3 +177,77 @@ body.overlay-mode {
   border-color: #ff6a00 !important;
   background: linear-gradient(135deg, #1a0800 0%, #0d0400 100%) !important;
 }
+
+@keyframes blueFirePulse {
+  0%, 100% { box-shadow: 0 0 10px #0055ff55, 0 0 22px #003acc33; border-color: #2255ff; }
+  50%       { box-shadow: 0 0 18px #0088ff88, 0 0 36px #0055ee55; border-color: #00aaff; }
+}
+
+@keyframes blueFlameA {
+  0%   { transform: scaleY(1)    translateY(0)    skewX(0deg);  opacity: 0.85; }
+  25%  { transform: scaleY(1.13) translateY(-7%)  skewX(-2deg); opacity: 1;    }
+  55%  { transform: scaleY(0.94) translateY(3%)   skewX(1deg);  opacity: 0.7;  }
+  80%  { transform: scaleY(1.08) translateY(-4%)  skewX(-1deg); opacity: 0.95; }
+  100% { transform: scaleY(1)    translateY(0)    skewX(0deg);  opacity: 0.85; }
+}
+
+@keyframes blueFlameB {
+  0%   { transform: scaleY(1.1)  translateY(-5%)  skewX(1deg);  opacity: 0.9;  }
+  35%  { transform: scaleY(0.9)  translateY(4%)   skewX(-2deg); opacity: 0.65; }
+  65%  { transform: scaleY(1.18) translateY(-9%)  skewX(2deg);  opacity: 1;    }
+  100% { transform: scaleY(1.1)  translateY(-5%)  skewX(1deg);  opacity: 0.9;  }
+}
+
+.blue-fire-streak {
+  position: relative !important;
+  overflow: hidden !important;
+  animation: blueFirePulse 2.2s ease-in-out infinite;
+  border-color: #2255ff !important;
+  background: linear-gradient(180deg, #000515 0%, #000e2a 55%, #001840 100%) !important;
+}
+
+.blue-fire-streak::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: -10%;
+  width: 120%;
+  height: 65%;
+  background:
+    radial-gradient(ellipse 18% 55% at  6% 100%, #0066ffee 0%, transparent 65%),
+    radial-gradient(ellipse 14% 42% at 17% 100%, #00aaffcc 0%, transparent 60%),
+    radial-gradient(ellipse 20% 62% at 28% 100%, #004dffee 0%, transparent 68%),
+    radial-gradient(ellipse 15% 46% at 41% 100%, #0088ffcc 0%, transparent 62%),
+    radial-gradient(ellipse 22% 66% at 54% 100%, #0055ffee 0%, transparent 70%),
+    radial-gradient(ellipse 16% 50% at 67% 100%, #00bbffcc 0%, transparent 63%),
+    radial-gradient(ellipse 19% 58% at 79% 100%, #0044ffee 0%, transparent 67%),
+    radial-gradient(ellipse 14% 40% at 92% 100%, #0099ffcc 0%, transparent 60%);
+  animation: blueFlameA 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blue-fire-streak::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: -15%;
+  width: 130%;
+  height: 52%;
+  background:
+    radial-gradient(ellipse 15% 40% at 10% 100%, #00ccffdd 0%, transparent 62%),
+    radial-gradient(ellipse 20% 56% at 24% 100%, #0055ffee 0%, transparent 68%),
+    radial-gradient(ellipse 13% 38% at 37% 100%, #00aaffcc 0%, transparent 58%),
+    radial-gradient(ellipse 21% 60% at 51% 100%, #0044ffee 0%, transparent 70%),
+    radial-gradient(ellipse 14% 43% at 64% 100%, #0099ffdd 0%, transparent 62%),
+    radial-gradient(ellipse 18% 52% at 77% 100%, #0066ffee 0%, transparent 66%),
+    radial-gradient(ellipse 13% 36% at 90% 100%, #00bbffcc 0%, transparent 58%);
+  animation: blueFlameB 2.7s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blue-fire-streak > * {
+  position: relative;
+  z-index: 1;
+}
