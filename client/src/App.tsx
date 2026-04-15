@@ -290,11 +290,57 @@ const AppMain: React.FC = () => {
         )}
       </header>
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%', position: 'relative' }}>
-        {(view === 'group' || view === 'rating') && <>
+      {view === 'rating' && (
+        <div style={{ position: 'fixed', top: '150px', left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', display: 'flex', justifyContent: 'space-between' }}>
+          {/* 왼쪽 사이드바: 18vw로 축축소하여 중앙 가독성 극대화 */}
+          <div style={{ width: '18vw', height: '100%', position: 'relative', overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: 'url(/rating.png)',
+              backgroundSize: '556% 100%', /* 1327 / (331-offset) */
+              backgroundPosition: 'left -38.5% center'
+            }} />
+            {MEMBER_IMAGES[user.name] && (
+              <img src={`/${MEMBER_IMAGES[user.name]}`} alt={user.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', display: 'block' }} />
+            )}
+          </div>
+
+          {/* 오른쪽 사이드바: 28vw로 축소화하여 중앙 가독성 극대화 */}
+          <div style={{ width: '28vw', height: '100%', position: 'relative', overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: 'url(/rating.png)',
+              backgroundSize: '350% 100%', /* 1327 / 513 scaled down */
+              backgroundPosition: 'right -14.5% center'
+            }} />
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 33.33%)',
+              gridTemplateRows: 'repeat(2, 50%)',
+              height: '100%',
+              width: '100%'
+            }}>
+              {['1.png', '2.png', '3.png', '4.png', '5.png', '6.png'].map((name, idx) => (
+                <img
+                  key={name}
+                  src={`/${name}`}
+                  alt={`member-${idx}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', minHeight: 0 }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {view === 'group' && (
+        <>
           <div style={{ position: 'fixed', top: 0, left: 0, width: '32vw', height: '100vh', zIndex: 0, pointerEvents: 'none', backgroundImage: 'url(/login-bg.png)', backgroundSize: '200% 100%', backgroundPosition: 'left center', backgroundRepeat: 'no-repeat', maskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)' }} />
           <div style={{ position: 'fixed', top: 0, right: 0, width: '32vw', height: '100vh', zIndex: 0, pointerEvents: 'none', backgroundImage: 'url(/login-bg.png)', backgroundSize: '200% 100%', backgroundPosition: 'right center', backgroundRepeat: 'no-repeat', maskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 150px, black 150px)' }} />
-        </>}
+        </>
+      )}
+
+      <div style={{ maxWidth: '1000px', margin: '0 auto', width: '100%', position: 'relative' }}>
         <div style={{ position: 'relative', zIndex: 1 }}>
           {view === 'dashboard' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -2135,7 +2181,16 @@ const LEAGUE_CONFIG: Record<RatingLeague, { label: string; color: string; bg: st
   'extra': { label: '번외 (4000점 이하)', color: '#a0a0a0', bg: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)', minRating: 0 },
 };
 
-const MEMBERS = ['찌모', '미랑', '갱쥰', '서씨', '떠기', '말구'];
+const MEMBERS = ['찌모', '미랑', '갱쥰', '서씨', '떠기', '말구', '핸탄'];
+
+const MEMBER_IMAGES: Record<string, string> = {
+  '말구': '1.png',
+  '서씨': '2.png',
+  '갱쥰': '3.png',
+  '미랑': '4.png',
+  '찌모': '5.png',
+  '핸탄': '6.png'
+};
 
 const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [characters, setCharacters] = useState<RatingCharacter[]>([]);
