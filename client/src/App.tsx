@@ -3,6 +3,8 @@ import { io } from 'socket.io-client';
 import { RotateCcw, PartyPopper, Sparkles, Zap, Trash2, Settings2, EyeOff, Eye, Users, Lock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import RatingViewer from './RatingViewer';
+import QuizShow from './QuizShow';
+import QuizOverlay from './QuizOverlay';
 
 // 접속한 호스트명을 유지하면서 포트만 변경하여 범용적인 서버 주소 생성
 const IS_DEV = window.location.port === '5173';
@@ -68,7 +70,8 @@ const AppMain: React.FC = () => {
     } catch { }
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz'>('dashboard');
+  const [isTestPanelOpen, setIsTestPanelOpen] = useState(false);
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
   const [isMissionDonationOnly, setIsMissionDonationOnly] = useState(false);
@@ -145,14 +148,6 @@ const AppMain: React.FC = () => {
     fetch(`${SOCKET_URL}/auto-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: nextVal }) });
   };
 
-  const addTestMission = (content: string) => {
-    console.log("[Test] Adding Mission Content:", content);
-    fetch(`${SOCKET_URL}/missions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creator: '테스터', content })
-    }).catch(err => console.error("Test fetch error:", err));
-  };
 
   const addTestDonation = (content: string) => {
     console.log("[Test] Simulating Donation Command:", content);
@@ -196,97 +191,109 @@ const AppMain: React.FC = () => {
   }
 
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: '#050505', padding: '15px', paddingTop: '80px', color: 'white', boxSizing: 'border-box' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1.5px solid #111', paddingBottom: '15px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: '#050505', padding: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Zap size={24} color={user.name === '폭병' ? '#ff2eb4' : '#00ffa3'} fill={user.name === '폭병' ? '#ff2eb433' : '#00ffa333'} />
-          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: user.name === '폭병' ? '#ff2eb4' : '#00ffa3', letterSpacing: '-1px' }}>
-            {user.name !== '폭병' && '찌모의 놀이터 '}
-            <span style={{ fontSize: '0.8rem', color: '#888' }}>({user.name})</span>
-          </h1>
+    <div style={{ width: '100%', minHeight: '100vh', background: '#050505', padding: '15px', paddingTop: user.role === 'admin' ? (isTestPanelOpen ? '118px' : '80px') : '80px', color: 'white', boxSizing: 'border-box' }}>
+      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: '#050505' }}>
+        {/* ── 1행: 로고 + 탭 + 로그아웃 ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', borderBottom: '1px solid #111' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Zap size={24} color={user.name === '폭병' ? '#ff2eb4' : '#00ffa3'} fill={user.name === '폭병' ? '#ff2eb433' : '#00ffa333'} />
+            <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: user.name === '폭병' ? '#ff2eb4' : '#00ffa3', letterSpacing: '-1px' }}>
+              {user.name !== '폭병' && '찌모의 놀이터 '}
+              <span style={{ fontSize: '0.8rem', color: '#888' }}>({user.name})</span>
+            </h1>
+          </div>
+
+          {user.role === 'member' && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
+              <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
+              <button onClick={() => setView('quiz')} style={{ background: view === 'quiz' ? '#222' : 'transparent', color: view === 'quiz' ? '#f59e0b' : '#666', border: '1px solid', borderColor: view === 'quiz' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 퀴즈쇼</button>
+              <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
+              <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+              <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
+              {user.name === '폭병' && (
+                <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>특수룰렛</button>
+              )}
+            </div>
+          )}
+
+          {user.role === 'guest' && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
+              <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+              {user.name === '폭병' && (
+                <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>특수룰렛</button>
+              )}
+            </div>
+          )}
+
+          {user.role !== 'member' && user.role !== 'guest' && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setView('dashboard')} style={{ background: view === 'dashboard' ? '#222' : 'transparent', color: view === 'dashboard' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'dashboard' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>메인대시보드</button>
+              <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
+              <button onClick={() => setView('sentiment')} style={{ background: view === 'sentiment' ? '#222' : 'transparent', color: view === 'sentiment' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'sentiment' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>민심판독기</button>
+              <div style={{ width: '1px', background: '#333', margin: '0 5px' }}></div>
+              <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
+              <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
+              {(user.name === '폭병' || user.role === 'admin') && (
+                <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>특수룰렛</button>
+              )}
+              <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
+              <button onClick={() => setView('quiz')} style={{ background: view === 'quiz' ? '#222' : 'transparent', color: view === 'quiz' ? '#f59e0b' : '#666', border: '1px solid', borderColor: view === 'quiz' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 퀴즈쇼</button>
+              <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
+              <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
+              <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {user.role === 'admin' && (
+              <button
+                onClick={() => setIsTestPanelOpen(v => !v)}
+                style={{
+                  background: isTestPanelOpen ? '#1a2a1a' : 'transparent',
+                  border: `1px solid ${isTestPanelOpen ? '#00ffa355' : '#333'}`,
+                  color: isTestPanelOpen ? '#00ffa3' : '#555',
+                  padding: '6px 12px', borderRadius: '10px', cursor: 'pointer',
+                  fontWeight: 700, fontSize: '0.78rem', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: '5px'
+                }}
+              >
+                🧪 {isTestPanelOpen ? '패널 닫기 ▲' : '테스트 패널 ▼'}
+              </button>
+            )}
+            <button onClick={() => { localStorage.removeItem('userSession'); setUser(null); }} style={{ background: 'transparent', border: '1px solid #444', color: '#888', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>로그아웃</button>
+          </div>
         </div>
 
-        {user.role === 'member' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
-            <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
-            <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
-            <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
-            <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
-            {user.name === '폭병' && (
-              <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
-            )}
-          </div>
-        )}
-
-        {user.role === 'guest' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
-            <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
-            {user.name === '폭병' && (
-              <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
-            )}
-          </div>
-        )}
-
-        {user.role !== 'member' && user.role !== 'guest' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setView('dashboard')} style={{ background: view === 'dashboard' ? '#222' : 'transparent', color: view === 'dashboard' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'dashboard' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>메인대시보드</button>
-            <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
-            <button onClick={() => setView('sentiment')} style={{ background: view === 'sentiment' ? '#222' : 'transparent', color: view === 'sentiment' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'sentiment' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>민심판독기</button>
-            <div style={{ width: '1px', background: '#333', margin: '0 5px' }}></div>
-            <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
-            <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
-            {(user.name === '폭병' || user.role === 'admin') && (
-              <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>폭병특수룰렛</button>
-            )}
-            <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
-            <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
-            <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
-            <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
-          </div>
-        )}
-
-        <button onClick={() => { localStorage.removeItem('userSession'); setUser(null); }} style={{ background: 'transparent', border: '1px solid #444', color: '#888', padding: '6px 14px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>로그아웃</button>
-
-        {user.role === 'admin' && (
-          <div style={{ display: 'flex', gap: '8px', background: '#111', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: '#666', display: 'flex', alignItems: 'center' }}>[Test Panel]</span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: '#ffbd2e', fontWeight: 900, cursor: 'pointer', borderRight: '1px solid #333', paddingRight: '10px', marginRight: '5px' }}>
+        {/* ── 2행: 테스트 패널 (어드민 전용, 최소화 가능) ── */}
+        {user.role === 'admin' && isTestPanelOpen && (
+          <div style={{ display: 'flex', gap: '8px', background: '#0a0a0a', padding: '8px 15px', borderBottom: '1px solid #1a2a1a', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', color: '#3a5a3a', fontWeight: 700, letterSpacing: '0.05em' }}>TEST</span>
+            <div style={{ width: '1px', background: '#222', height: '16px' }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: '#ffbd2e', fontWeight: 900, cursor: 'pointer', borderRight: '1px solid #222', paddingRight: '10px', marginRight: '2px' }}>
               <input type="checkbox" checked={isDonationOnly} onChange={toggleDonationOnly} style={{ cursor: 'pointer' }} />
               도네 전용
             </label>
             <button onClick={() => {
-              if (user.role === 'admin') {
-                const val = prompt('테스트할 채팅 내용을 입력하세요 (예: !미션 물마시기)');
-                if (val) testChat(val);
-              } else {
-                addTestMission('테스트 미션입니다');
-              }
-            }} style={{ background: '#222', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 미션 추가</button>
+              const val = prompt('테스트할 채팅 내용을 입력하세요 (예: !미션 물마시기)');
+              if (val) testChat(val);
+            }} style={{ background: '#161616', border: '1px solid #2a2a2a', color: '#fff', cursor: 'pointer', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem' }}>+ 미션 추가</button>
             <button onClick={() => {
-              if (user.role === 'admin') {
-                const val = prompt('테스트할 사다리/룰렛 벌칙 채팅을 입력하세요 (예: !미션 의리사다리 벌칙!)');
-                if (val) testChat(val);
-              } else {
-                addTestMission('의리사다리 벌칙!');
-              }
-            }} style={{ background: '#222', border: 'none', color: '#00d1ff', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 사다리/룰렛 벌칙</button>
+              const val = prompt('테스트할 사다리/룰렛 벌칙 채팅을 입력하세요');
+              if (val) testChat(val);
+            }} style={{ background: '#161616', border: '1px solid #2a2a2a', color: '#00d1ff', cursor: 'pointer', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem' }}>+ 사다리/룰렛 벌칙</button>
             <button onClick={() => {
-              if (user.role === 'admin') {
-                const val = prompt('테스트할 후원 채팅을 입력하세요 (예: !룰렛추가 초코우유)');
-                if (val) addTestDonation(val);
-              } else {
-                addTestDonation('!룰렛추가 10스쿼트');
-              }
-            }} style={{ background: '#222', border: 'none', color: '#ffbd2e', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 도네(룰렛옵션)</button>
-            <button onClick={() => fetch(`${SOCKET_URL}/test-sentiment`, { method: 'POST' })} style={{ background: '#222', border: 'none', color: '#ff4b4b', cursor: 'pointer', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem' }}>+ 채팅(민심조작)</button>
-            <div style={{ width: '1px', background: '#333', margin: '0 4px' }} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: isCheeseEnabled ? '#f5c542' : '#555', fontWeight: 900, cursor: 'pointer' }}>
+              const val = prompt('테스트할 후원 채팅을 입력하세요 (예: !룰렛추가 초코우유)');
+              if (val) addTestDonation(val);
+            }} style={{ background: '#161616', border: '1px solid #2a2a2a', color: '#ffbd2e', cursor: 'pointer', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem' }}>+ 도네(룰렛옵션)</button>
+            <button onClick={() => fetch(`${SOCKET_URL}/test-sentiment`, { method: 'POST' })} style={{ background: '#161616', border: '1px solid #2a2a2a', color: '#ff4b4b', cursor: 'pointer', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem' }}>+ 채팅(민심조작)</button>
+            <div style={{ width: '1px', background: '#222', height: '16px', margin: '0 2px' }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: isCheeseEnabled ? '#f5c542' : '#444', fontWeight: 900, cursor: 'pointer' }}>
               <input type="checkbox" checked={isCheeseEnabled} onChange={toggleCheeseEnabled} style={{ cursor: 'pointer' }} />
               🧀 치즈
             </label>
-            <button onClick={testCheese} disabled={!isCheeseEnabled} style={{ background: isCheeseEnabled ? '#2a2000' : '#1a1a1a', border: `1px solid ${isCheeseEnabled ? '#f5c542' : '#333'}`, color: isCheeseEnabled ? '#f5c542' : '#444', cursor: isCheeseEnabled ? 'pointer' : 'not-allowed', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }}>🧀 테스트</button>
+            <button onClick={testCheese} disabled={!isCheeseEnabled} style={{ background: isCheeseEnabled ? '#2a2000' : '#111', border: `1px solid ${isCheeseEnabled ? '#f5c542' : '#222'}`, color: isCheeseEnabled ? '#f5c542' : '#333', cursor: isCheeseEnabled ? 'pointer' : 'not-allowed', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, transition: 'all 0.2s' }}>🧀 테스트</button>
           </div>
         )}
       </header>
@@ -415,6 +422,8 @@ const AppMain: React.FC = () => {
             <RouletteGame key="pok-roul-comp-last" user={user!} isPokMode={true} />
           ) : view === 'feedback' ? (
             <FeedbackBoard user={user!} />
+                          ) : view === 'quiz' ? (
+                            <QuizShow user={user!} />
           ) : (
             <RouletteGame key="roul-comp-last" user={user!} />
           )}
@@ -3641,7 +3650,8 @@ const RogadaBoardOverlay: React.FC = () => {
 // OBS 오버레이 진입점 — 모든 컴포넌트 정의 후 마지막에 위치
 const App: React.FC = () => {
   const overlayParam = new URLSearchParams(window.location.search).get('overlay');
-  const isOverlay = overlayParam === 'true' || overlayParam === 'mission' || overlayParam === 'rogada';
+  const typeParam = new URLSearchParams(window.location.search).get('type');
+  const isOverlay = overlayParam === 'true' || overlayParam === 'mission' || overlayParam === 'rogada' || typeParam === 'quiz_overlay';
 
   useEffect(() => {
     if (isOverlay) {
@@ -3658,8 +3668,8 @@ const App: React.FC = () => {
     };
   }, [isOverlay]);
 
-  const typeParam = new URLSearchParams(window.location.search).get('type');
   if (typeParam === 'viewer') return <RatingViewer />;
+  if (typeParam === 'quiz_overlay') return <QuizOverlay />;
 
   if (overlayParam === 'rogada') return <RogadaBoardOverlay />;
   if (overlayParam === 'mission') return <MissionBoardOverlay />;

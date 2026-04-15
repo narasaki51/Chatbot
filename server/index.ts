@@ -84,6 +84,74 @@ const analyzeSentiment = (content: string) => {
   }
 };
 
+// ==================== 퀴즈쇼 상태 (processMessage 위에 선언) ====================
+type QuizMode = 'ox' | 'choice';
+interface QuizState {
+  isActive: boolean;
+  mode: QuizMode;
+  question: string;
+  correctAnswer: string;
+  choice1: string;
+  choice2: string;
+  answers: { sender: string; answer: string; timestamp: number; channel: string }[];
+  startedAt: string | null;
+  endedAt: string | null;
+  isConsecutiveMode: boolean;
+  previousWinnerCount: number;
+}
+
+let quizState: QuizState = {
+  isActive: false,
+  mode: 'ox',
+  question: '',
+  correctAnswer: '',
+  choice1: '1번',
+  choice2: '2번',
+  answers: [],
+  startedAt: null,
+  endedAt: null,
+  isConsecutiveMode: false,
+  previousWinnerCount: 0,
+};
+
+let previousWinners: string[] = [];
+
+// 퀴즈 응답 공통 처리 함수
+const handleQuizResponse = (sender: string, content: string, channel: string) => {
+  if (!quizState.isActive) return;
+
+  // 연속체크 모드: 이전 정답자 명단에 있는 사람만 허용
+  if (quizState.isConsecutiveMode && previousWinners.length > 0) {
+    if (!previousWinners.includes(sender)) return;
+  }
+
+  const trimmed = content.trim().toUpperCase();
+  const validOX = ['O', 'X', '오', '엑스'];
+  const normalizedOX = trimmed === '오' ? 'O' : trimmed === '엑스' ? 'X' : trimmed;
+
+  if (quizState.mode === 'ox') {
+    const isOXAnswer = (validOX.includes(trimmed) || normalizedOX === 'X' || normalizedOX === 'O');
+    if (isOXAnswer) {
+      const answerVal = (trimmed === '오' ? 'O' : trimmed === '엑스' ? 'X' : normalizedOX);
+      if (!quizState.answers.find((a: any) => a.sender === sender)) {
+        quizState.answers.push({ sender, answer: answerVal, timestamp: Date.now(), channel });
+        io.emit('quizUpdate', quizState);
+        console.log(`🎯 [Quiz OX] ${sender} (${channel}): ${answerVal}`);
+      }
+    }
+  } else if (quizState.mode === 'choice') {
+    // 선착순 텍스트 정답 모드 (정확히 일치해야 함)
+    const isCorrect = trimmed === quizState.correctAnswer.trim().toUpperCase();
+    if (isCorrect) {
+      if (!quizState.answers.find((a: any) => a.sender === sender)) {
+        quizState.answers.push({ sender, answer: content.trim(), timestamp: Date.now(), channel });
+        io.emit('quizUpdate', quizState);
+        console.log(`🏆 [Quiz Correct] ${sender} (${channel}): ${content.trim()}`);
+      }
+    }
+  }
+};
+
 const processMessage = (sender: string, content: string, isDonation: boolean = false) => {
   // 민심 분석 실행 (모든 메시지 대상)
   analyzeSentiment(content);
@@ -174,7 +242,11 @@ const processMessage = (sender: string, content: string, isDonation: boolean = f
       console.log(`🎡 [Roulette Item Added] ${sender} -> ${rouletteContent} (Mode: ${isDonationOnly ? 'DonationOnly' : 'AllChat'})`);
     }
   }
+
+  // 퀴즈 응답 처리
+  handleQuizResponse(sender, content, '찌모');
 };
+
 
 // [멤버별 개별 채팅 연결 관리를 위한 Map 객체]
 const memberChats = new Map<string, any>();
@@ -231,6 +303,9 @@ const processMemberSpecificMessage = (member: string, sender: string, content: s
       console.log(`🎡 [Member Roulette] ${member} <- ${sender}: ${rouletteContent}`);
     }
   }
+
+  // 퀴즈 응답 처리 (모든 멤버 채널 통합 집계)
+  handleQuizResponse(sender, content, member);
 };
 
 const CHANNEL_ID = process.env.CHZZK_CHANNEL_ID || '82c0b64d12c823f66810c97d62234e4f';
@@ -433,8 +508,75 @@ app.delete('/feedbacks/:id', (req, res) => {
   res.status(204).send();
 });
 
+// ==================== 퀴즈쇼 API ====================
+app.get('/quiz/state', (req, res) => res.json(quizState));
+
+// 문제 편집 중 신호 — 오버레이에 "문제 입력 중" 표시
+app.post('/quiz/editing', (req, res) => {
+  if (!quizState.isActive) {
+    io.emit('quizEditing');
+  }
+  res.json({ ok: true });
+});
+
+app.post('/quiz/start', (req, res) => {
+  const { mode, question, correctAnswer, choice1, choice2, isConsecutiveMode } = req.body;
+  if (!correctAnswer) return res.status(400).json({ error: '정답 필요' });
+  quizState = {
+    isActive: true,
+    mode: mode || 'ox',
+    question: question || '',
+    correctAnswer,
+    choice1: choice1 || '1번',
+    choice2: choice2 || '2번',
+    answers: [],
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isConsecutiveMode: !!isConsecutiveMode,
+    previousWinnerCount: previousWinners.length,
+  };
+  io.emit('quizUpdate', quizState);
+  console.log(`🎯 [Quiz Start] mode=${mode}, answer=${correctAnswer}, consecutive=${isConsecutiveMode}`);
+  res.json({ success: true });
+});
+
+app.post('/quiz/stop', (req, res) => {
+  // 이전 정답자 명단 갱신
+  if (quizState.mode === 'ox') {
+    previousWinners = quizState.answers
+      .filter(a => a.answer === quizState.correctAnswer)
+      .map(a => a.sender);
+  } else {
+    // choice 모드는 answers에 이미 필터링된 정답자만 들어있음
+    previousWinners = quizState.answers.map(a => a.sender);
+  }
+
+  // 중복 제거
+  previousWinners = Array.from(new Set(previousWinners));
+
+  quizState.isActive = false;
+  quizState.endedAt = new Date().toISOString();
+  quizState.previousWinnerCount = previousWinners.length;
+
+  io.emit('quizUpdate', quizState);
+  console.log(`🏁 [Quiz Stop] correctAnswer=${quizState.correctAnswer}, winners=${previousWinners.length}`);
+  res.json({ success: true, state: quizState });
+});
+
+app.post('/quiz/reset', (req, res) => {
+  previousWinners = [];
+  quizState = {
+    isActive: false, mode: 'ox', question: '', correctAnswer: '',
+    choice1: '1번', choice2: '2번', answers: [], startedAt: null, endedAt: null,
+    isConsecutiveMode: false, previousWinnerCount: 0,
+  };
+  io.emit('quizUpdate', quizState);
+  res.json({ success: true });
+});
+
 // [최적화된 Catch-all] API 경로가 아닌 요청만 React로 전달
-const API_PREFIXES = ['/missions', '/login', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks'];
+const API_PREFIXES = ['/missions', '/login', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz'];
+
 app.use((req, res, next) => {
   const isApi = API_PREFIXES.some(prefix => req.path.startsWith(prefix));
   if (req.method === 'GET' && !isApi) {
