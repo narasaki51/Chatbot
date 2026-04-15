@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { RotateCcw, PartyPopper, Sparkles, Zap, Trash2, Settings2, EyeOff, Eye, Users, Lock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import RatingViewer from './RatingViewer';
 
 // 접속한 호스트명을 유지하면서 포트만 변경하여 범용적인 서버 주소 생성
 const IS_DEV = window.location.port === '5173';
@@ -2380,15 +2381,29 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
           <h2 style={{ margin: 0, color: cfg.color, fontWeight: 900, fontSize: '1.4rem' }}>🏆 {cfg.label}</h2>
           <p style={{ margin: '4px 0 0', color: '#888', fontSize: '0.85rem' }}>기준 레이팅: {cfg.minRating}점 · 승 +20 / 패 -20</p>
         </div>
-        {canRegister && (
-          <button onClick={() => {
-            setShowRegisterModal(true);
-            // 멤버면 자동으로 본인 이름 세팅
-            setRegForm({ memberName: isMember && !isAdmin ? user.name : '', characterName: '', jobName: '', league: activeLeague, initialRating: '' });
-          }} style={{
-            background: cfg.color, color: '#000', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem'
-          }}>+ 캐릭터 등록</button>
-        )}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {isAdmin && (
+            <button
+              onClick={async () => {
+                if (confirm('현재 데이터를 뷰어용 보드로 즉시 동기화할까요?')) {
+                  const res = await fetch(`${API}/rating-viewer/sync`, { method: 'POST' });
+                  const data = await res.json();
+                  if (data.success) alert('동기화 성공!');
+                }
+              }}
+              style={{ background: 'transparent', color: '#60a5fa', border: '1px solid #60a5fa', padding: '10px 16px', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}
+            >🔄 뷰어 동기화</button>
+          )}
+          {canRegister && (
+            <button onClick={() => {
+              setShowRegisterModal(true);
+              // 멤버면 자동으로 본인 이름 세팅
+              setRegForm({ memberName: isMember && !isAdmin ? user.name : '', characterName: '', jobName: '', league: activeLeague, initialRating: '' });
+            }} style={{
+              background: cfg.color, color: '#000', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem'
+            }}>+ 캐릭터 등록</button>
+          )}
+        </div>
       </div>
 
       {/* 순위표 */}
@@ -3642,6 +3657,9 @@ const App: React.FC = () => {
       document.getElementById('root')?.classList.remove('overlay-root');
     };
   }, [isOverlay]);
+
+  const typeParam = new URLSearchParams(window.location.search).get('type');
+  if (typeParam === 'viewer') return <RatingViewer />;
 
   if (overlayParam === 'rogada') return <RogadaBoardOverlay />;
   if (overlayParam === 'mission') return <MissionBoardOverlay />;

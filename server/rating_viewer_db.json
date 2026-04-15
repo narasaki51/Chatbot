@@ -1,0 +1,69 @@
+{
+  "characters": [
+    {
+      "id": "1776167914232_a3a7d",
+      "memberName": "갱쥰",
+      "characterName": "갱쥰",
+      "jobName": "달소",
+      "league": "4000",
+      "score": 5000,
+      "rating": 1050,
+      "wins": 1,
+      "losses": 0,
+      "winStreak": 1,
+      "registeredAt": "2026-04-14T11:58:34.232Z"
+    },
+    {
+      "id": "1776169132455_dx68h",
+      "memberName": "찌모",
+      "characterName": "슈퍼찌모",
+      "jobName": "갈증",
+      "league": "4000",
+      "score": 5000,
+      "rating": 980,
+      "wins": 0,
+      "losses": 1,
+      "winStreak": 0,
+      "registeredAt": "2026-04-14T12:18:52.455Z"
+    },
+    {
+      "id": "1776171078564_ep5za",
+      "memberName": "서씨",
+      "characterName": "서씨가문의수치",
+      "jobName": "알카",
+      "league": "4000",
+      "score": 4000,
+      "rating": 980,
+      "wins": 0,
+      "losses": 1,
+      "winStreak": 0,
+      "registeredAt": "2026-04-14T12:51:18.564Z"
+    }
+  ],
+  "battles": [
+    {
+      "id": "b_1776171134811_2zn5",
+      "challengerId": "1776167914232_a3a7d",
+      "challengerName": "갱쥰",
+      "challengerMember": "갱쥰",
+      "defenderId": "1776169132455_dx68h",
+      "defenderName": "슈퍼찌모",
+      "defenderMember": "찌모",
+      "league": "4000",
+      "status": "completed",
+      "ratingChange": 50,
+      "createdAt": "2026-04-14T12:52:14.811Z",
+      "updatedAt": "2026-04-14T12:55:30.159Z",
+      "intruderId": "1776171078564_ep5za",
+      "intruderName": "서씨가문의수치",
+      "intruderMember": "서씨",
+      "winnerId": "1776167914232_a3a7d",
+      "loserId": "1776169132455_dx68h",
+      "loserIds": [
+        "1776169132455_dx68h",
+        "1776171078564_ep5za"
+      ],
+      "isTriple": true
+    }
+  ]
+}

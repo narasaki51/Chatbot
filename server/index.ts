@@ -579,6 +579,11 @@ if (!fs.existsSync(RATING_DB_PATH)) fs.writeFileSync(RATING_DB_PATH, JSON.string
 const getRatingDB = () => JSON.parse(fs.readFileSync(RATING_DB_PATH, 'utf-8'));
 const saveRatingDB = (data: any) => fs.writeFileSync(RATING_DB_PATH, JSON.stringify(data, null, 2));
 
+const RATING_VIEWER_DB_PATH = path.join(__dirname, 'rating_viewer_db.json');
+if (!fs.existsSync(RATING_VIEWER_DB_PATH)) fs.writeFileSync(RATING_VIEWER_DB_PATH, JSON.stringify({ characters: [] }));
+const getRatingViewerDB = () => JSON.parse(fs.readFileSync(RATING_VIEWER_DB_PATH, 'utf-8'));
+const saveRatingViewerDB = (data: any) => fs.writeFileSync(RATING_VIEWER_DB_PATH, JSON.stringify(data, null, 2));
+
 // 기존 캐릭터 마이그레이션: score 없으면 rating값을 score로, rating은 1000으로 초기화 / winStreak 없으면 0으로 초기화
 (() => {
   const db = getRatingDB();
@@ -597,9 +602,61 @@ const saveRatingDB = (data: any) => fs.writeFileSync(RATING_DB_PATH, JSON.string
   if (changed) saveRatingDB(db);
 })();
 
+// ==================== 레이팅 보드 자동 백업 ====================
+const BACKUP_DIR = path.join(__dirname, 'backups', 'rating');
+
+const performDailyBackup = () => {
+  try {
+    if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+    const db = getRatingDB();
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const backupPath = path.join(BACKUP_DIR, `rating_${dateStr}.json`);
+
+    fs.writeFileSync(backupPath, JSON.stringify(db, null, 2));
+    // 백업 시점에 뷰어용 DB도 동기화 (원본 복사본 유지)
+    saveRatingViewerDB(db);
+
+    console.log(`💾 [Daily Backup] Snapshot saved to ${backupPath} and Viewer DB updated.`);
+    io.emit('ratingViewerUpdate', db);
+  } catch (error) {
+    console.error(`❌ [Daily Backup Error]`, error);
+  }
+};
+
+// 매일 자정(0시 0분 1초)에 실행되도록 설정
+const scheduleDailyBackup = () => {
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+  const msToMidnight = tomorrow.getTime() - now.getTime();
+
+  setTimeout(() => {
+    performDailyBackup();
+    setInterval(performDailyBackup, 24 * 60 * 60 * 1000);
+  }, msToMidnight);
+
+  console.log(`🕒 [Backup Scheduler] Registered. Next backup in ${Math.floor(msToMidnight / 1000 / 60)} minutes.`);
+};
+
+scheduleDailyBackup();
+
 // 전체 캐릭터 조회
 app.get('/rating', (req, res) => {
   res.json(getRatingDB());
+});
+
+// 뷰어용 캐릭터 조회 (백업된 원본 복사본 기반)
+app.get('/rating-viewer', (req, res) => {
+  res.json(getRatingViewerDB());
+});
+
+// 수동으로 현재 데이터를 뷰어로 즉시 복사
+app.post('/rating-viewer/sync', (req, res) => {
+  const db = getRatingDB();
+  saveRatingViewerDB(db);
+  io.emit('ratingViewerUpdate', db);
+  res.json({ success: true });
 });
 
 // 캐릭터 등록
