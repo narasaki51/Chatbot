@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import RatingViewer from './RatingViewer';
 import QuizShow from './QuizShow';
 import QuizOverlay from './QuizOverlay';
+import Tournament from './Tournament';
+
 
 // 접속한 호스트명을 유지하면서 포트만 변경하여 범용적인 서버 주소 생성
 const IS_DEV = window.location.port === '5173';
@@ -70,7 +72,7 @@ const AppMain: React.FC = () => {
     } catch { }
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament'>('dashboard');
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(false);
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
@@ -194,9 +196,10 @@ const AppMain: React.FC = () => {
   }
 
   // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정 (사다리/룰렛은 허용)
-  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette' && view !== 'feedback' && view !== 'quiz') {
+  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette' && view !== 'feedback' && view !== 'quiz' && view !== 'tournament') {
     setView('group');
   }
+
 
   // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정 (사다리 허용)
   if (user.role === 'guest' && view !== 'roulette' && view !== 'ladder' && view !== 'pok_roulette') {
@@ -220,7 +223,9 @@ const AppMain: React.FC = () => {
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => setView('group')} style={{ background: view === 'group' ? '#222' : 'transparent', color: view === 'group' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'group' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>로가다</button>
               <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
+              <button onClick={() => setView('tournament')} style={{ background: view === 'tournament' ? '#222' : 'transparent', color: view === 'tournament' ? '#ffd700' : '#666', border: '1px solid', borderColor: view === 'tournament' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 천하제일무도회</button>
               <button onClick={() => setView('quiz')} style={{ background: view === 'quiz' ? '#222' : 'transparent', color: view === 'quiz' ? '#f59e0b' : '#666', border: '1px solid', borderColor: view === 'quiz' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 퀴즈쇼</button>
+
               <button onClick={() => setView('ladder')} style={{ background: view === 'ladder' ? '#222' : 'transparent', color: view === 'ladder' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'ladder' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>사다리타기</button>
               <button onClick={() => setView('roulette')} style={{ background: view === 'roulette' ? '#222' : 'transparent', color: view === 'roulette' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>룰렛돌리기</button>
               <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
@@ -252,6 +257,7 @@ const AppMain: React.FC = () => {
                 <button onClick={() => setView('pok_roulette')} style={{ background: view === 'pok_roulette' ? '#222' : 'transparent', color: view === 'pok_roulette' ? '#ff2eb4' : '#666', border: '1px solid', borderColor: view === 'pok_roulette' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>특수룰렛</button>
               )}
               <button onClick={() => setView('rating')} style={{ background: view === 'rating' ? '#222' : 'transparent', color: view === 'rating' ? '#a78bfa' : '#666', border: '1px solid', borderColor: view === 'rating' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 레이팅보드</button>
+              <button onClick={() => setView('tournament')} style={{ background: view === 'tournament' ? '#222' : 'transparent', color: view === 'tournament' ? '#ffd700' : '#666', border: '1px solid', borderColor: view === 'tournament' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 천하제일무도회</button>
               <button onClick={() => setView('quiz')} style={{ background: view === 'quiz' ? '#222' : 'transparent', color: view === 'quiz' ? '#f59e0b' : '#666', border: '1px solid', borderColor: view === 'quiz' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 퀴즈쇼</button>
               <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
               <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
@@ -437,6 +443,8 @@ const AppMain: React.FC = () => {
             <FeedbackBoard user={user!} />
                           ) : view === 'quiz' ? (
                             <QuizShow user={user!} />
+                            ) : view === 'tournament' ? (
+                              <Tournament user={user!} />
           ) : (
             <RouletteGame key="roul-comp-last" user={user!} />
           )}
