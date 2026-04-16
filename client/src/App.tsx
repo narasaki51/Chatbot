@@ -2230,6 +2230,8 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [challengeTargetId, setChallengeTargetId] = useState<string | null>(null);
   const [battleListOpen, setBattleListOpen] = useState(true);
   const [submittingBattleId, setSubmittingBattleId] = useState<string | null>(null);
+  const [matchmakingGuestId, setMatchmakingGuestId] = useState<string | null>(null);
+
 
   const API = SOCKET_URL;
 
@@ -2307,12 +2309,15 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   };
 
   // 대결 신청
-  const handleChallenge = async (challengerId: string, defenderId: string) => {
+  const handleChallenge = async (challengerId: string, defenderId: string, status?: string) => {
     const res = await fetch(`${API}/rating/battle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challengerId, defenderId })
+      body: JSON.stringify({ challengerId, defenderId, status })
     });
+
+
+
     const data = await res.json();
     if (!data.success) alert(data.message);
     setChallengeTargetId(null);
@@ -2427,6 +2432,19 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
           )}
         </div>
       </div>
+
+      {/* 매칭 진행 중 안내 */}
+      {matchmakingGuestId && (
+        <div style={{ background: '#a78bfa22', border: '1px solid #a78bfa44', borderRadius: '12px', padding: '12px 20px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⚔️</span>
+            <span style={{ fontWeight: 900, color: '#a78bfa' }}>
+              [{characters.find(c => c.id === matchmakingGuestId)?.characterName}] 의 대결 상대를 선택해주세요
+            </span>
+          </div>
+          <button onClick={() => setMatchmakingGuestId(null)} style={{ background: '#1a1a1a', color: '#888', border: '1px solid #333', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>매칭 취소</button>
+        </div>
+      )}
 
       {/* 순위표 */}
       {leagueChars.length === 0 ? (
@@ -2573,27 +2591,43 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                     </div>
                   )}
                 </div>
-                {/* 대결 신청 버튼 (본인 캐릭터 아닌 경우) */}
-                {char.memberName !== user.name && myLeagueChar && char.id !== myLeagueChar.id && (() => {
-                  const hasOngoing = battles.some(b =>
-                    ['pending', 'accepted'].includes(b.status) &&
-                    ([b.challengerId, b.defenderId].includes(myLeagueChar.id)) &&
-                    ([b.challengerId, b.defenderId].includes(char.id))
-                  );
-                  return !hasOngoing ? (
-                    challengeTargetId === char.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#aaa', textAlign: 'center' }}>대결 신청?</span>
-                        <button onClick={() => handleChallenge(myLeagueChar.id, char.id)} style={{ background: '#7c3aed', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>확인 ⚔️</button>
-                        <button onClick={() => setChallengeTargetId(null)} style={{ background: '#1a1a1a', color: '#666', border: '1px solid #333', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
-                      </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {/* 매칭 지정 버튼 (관리자 전용, 게스트 캐릭터 대상) */}
+                  {isAdmin && char.memberName === '게스트' && !matchmakingGuestId && (
+                    <button onClick={() => setMatchmakingGuestId(char.id)} style={{ background: '#00ffa322', color: '#00ffa3', border: '1px solid #00ffa344', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>⚔️ 매칭 지정</button>
+                  )}
+
+                  {/* 매칭 상대 선택 (매칭 모드 진행 중일 때 다른 모든 캐릭터 대상) */}
+                  {matchmakingGuestId && matchmakingGuestId !== char.id && (
+                    <button onClick={() => { handleChallenge(char.id, matchmakingGuestId, 'accepted'); setMatchmakingGuestId(null); }} style={{ background: '#a78bfa', color: '#000', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>⚔️ 상대로 지정</button>
+                  )}
+
+                  {/* 대결 신청 버튼 (기존 로직, 매칭 모드가 아닐 때만 노출) */}
+                  {!matchmakingGuestId && char.memberName !== user.name && myLeagueChar && char.id !== myLeagueChar.id && (() => {
+                    const hasOngoing = battles.some(b =>
+                      ['pending', 'accepted', 'intrusion_pending', 'triple_accepted'].includes(b.status) &&
+                      ([b.challengerId, b.defenderId, b.intruderId].filter(Boolean).includes(myLeagueChar.id)) &&
+                      ([b.challengerId, b.defenderId, b.intruderId].filter(Boolean).includes(char.id))
+                    );
+                    const myPendingBattle = battles.find(b => b.status === 'pending' && b.challengerId === myLeagueChar.id && !b.intruderId);
+
+                    return !hasOngoing ? (
+                      challengeTargetId === char.id ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#aaa', textAlign: 'center' }}>{myPendingBattle ? '3자 대결로 추가?' : '대결 신청?'}</span>
+                          <button onClick={() => handleChallenge(myLeagueChar.id, char.id)} style={{ background: myPendingBattle ? '#f97316' : '#7c3aed', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>확인 ⚔️</button>
+                          <button onClick={() => setChallengeTargetId(null)} style={{ background: '#1a1a1a', color: '#666', border: '1px solid #333', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
+                        </div>
+                      ) : (
+                          <button onClick={() => setChallengeTargetId(char.id)} style={{ background: myPendingBattle ? '#431407' : '#2d1b6e', color: myPendingBattle ? '#fb923c' : '#a78bfa', border: `1px solid ${myPendingBattle ? '#9a3412' : '#4c1d95'}`, padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{myPendingBattle ? '⚔️ 3자 대결 추가' : '⚔️ 대결 신청'}</button>
+                        )
+
                     ) : (
-                      <button onClick={() => setChallengeTargetId(char.id)} style={{ background: '#2d1b6e', color: '#a78bfa', border: '1px solid #4c1d95', padding: '8px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>⚔️ 대결 신청</button>
-                    )
-                  ) : (
-                    <span style={{ fontSize: '0.75rem', color: '#555', padding: '8px', whiteSpace: 'nowrap' }}>대결 중</span>
-                  );
-                })()}
+                      <span style={{ fontSize: '0.75rem', color: '#555', padding: '8px', whiteSpace: 'nowrap' }}>대결 중</span>
+                    );
+                  })()}
+                </div>
+
                 {/* 관리자 버튼 */}
                 {isAdmin && (
                   <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
@@ -2699,8 +2733,9 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                       <button onClick={() => handleIntrude(b.id, myLeagueChar!.id)} style={{ background: '#2a1500', color: '#f97316', border: '1px solid #f97316', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>⚡ 난입</button>
                     )}
 
-                    {/* 난입 수락/거절 - 원래 참여자(challenger/defender) or admin */}
-                    {isIntrusionPending && (isChallenger || isDefender || isAdmin) && (
+                    {/* 난입 수락/거절 - 참여자(challenger/defender/intruder) or admin */}
+                    {isIntrusionPending && (isChallenger || isDefender || isIntruder || isAdmin) && (
+
                       <>
                         <button onClick={() => handleBattleAction(b.id, 'accept_intrusion')} style={{ background: '#1e1a3f', color: '#a78bfa', border: '1px solid #7c3aed', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>⚡ 난입 수락</button>
                         <button onClick={() => handleBattleAction(b.id, 'reject_intrusion')} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '6px 12px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>❌ 난입 거절</button>

@@ -942,7 +942,7 @@ const appendBattleLog = (entry: any) => {
 
 // 대결 신청
 app.post('/rating/battle', (req, res) => {
-  const { challengerId, defenderId } = req.body;
+  const { challengerId, defenderId, status: reqStatus } = req.body;
   if (!challengerId || !defenderId) return res.status(400).json({ success: false, message: '필수 값 누락' });
 
   const db = ensureBattles(getRatingDB());
@@ -953,23 +953,45 @@ app.post('/rating/battle', (req, res) => {
 
   // 이미 진행 중인 대결 확인 (pending or accepted)
   const ongoing = db.battles.find((b: any) =>
-    ['pending', 'accepted'].includes(b.status) &&
-    [b.challengerId, b.defenderId].includes(challengerId) &&
-    [b.challengerId, b.defenderId].includes(defenderId)
+    ['pending', 'accepted', 'intrusion_pending', 'triple_accepted'].includes(b.status) &&
+    [b.challengerId, b.defenderId, b.intruderId].filter(Boolean).includes(challengerId) &&
+    [b.challengerId, b.defenderId, b.intruderId].filter(Boolean).includes(defenderId)
   );
   if (ongoing) return res.status(409).json({ success: false, message: '이미 진행 중인 대결이 있습니다' });
+
+  // [추가] 신청자가 이미 'pending' 상태인 대결을 가지고 있다면 3자 대결로 자동 전환
+  const existingPending = db.battles.find((b: any) =>
+    b.status === 'pending' &&
+    b.challengerId === challengerId &&
+    !b.intruderId
+  );
+
+  if (existingPending) {
+    existingPending.intruderId = defenderId;
+    existingPending.intruderName = defender.characterName;
+    existingPending.intruderMember = defender.memberName;
+    existingPending.status = 'intrusion_pending';
+    existingPending.updatedAt = new Date().toISOString();
+
+    saveRatingDB(db);
+    io.emit('ratingUpdate', db);
+    return res.json({ success: true, battle: existingPending });
+  }
+
 
   const battle = {
     id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     challengerId, challengerName: challenger.characterName, challengerMember: challenger.memberName,
     defenderId,   defenderName: defender.characterName,   defenderMember: defender.memberName,
     league: challenger.league,
-    status: 'pending',
+    status: (reqStatus === 'accepted' && (challenger.memberName === '게스트' || defender.memberName === '게스트')) ? 'accepted' : 'pending',
+
     ratingChange: 20,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   db.battles.push(battle);
+
   saveRatingDB(db);
   io.emit('ratingUpdate', db);
   res.json({ success: true, battle });
