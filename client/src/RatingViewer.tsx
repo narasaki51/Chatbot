@@ -182,6 +182,7 @@ const RatingViewer: React.FC = () => {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                        {rank === 1 && <span style={{ fontSize: '1.3rem', filter: 'drop-shadow(0 0 8px #ffd700aa)' }}>👑</span>}
                         <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff' }}>{char.characterName}</span>
                         {char.jobName && <span style={{ fontSize: '0.85rem', color: '#a78bfa', background: '#1e1030', padding: '1px 8px', borderRadius: '4px' }}>{char.jobName}</span>}
                         <span style={{ fontSize: '0.85rem', color: '#666' }}>{char.memberName}</span>

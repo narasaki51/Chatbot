@@ -36,6 +36,22 @@ const saveMissions = (missions: any) => fs.writeFileSync(DB_PATH, JSON.stringify
 const getFeedbacks = () => JSON.parse(fs.readFileSync(FEEDBACK_DB_PATH, 'utf-8'));
 const saveFeedbacks = (data: any) => fs.writeFileSync(FEEDBACK_DB_PATH, JSON.stringify(data, null, 2));
 
+// 접속 기록 로그 저장 기능
+const ACCESS_LOG_PATH = path.join(__dirname, 'access_log.txt');
+const logAccess = (name: string, type: 'login' | 'access', ip: string) => {
+  try {
+    const now = new Date();
+    // KST 시간 포맷 (YYYY-MM-DD HH:mm:ss)
+    const timestamp = now.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    const logMessage = `[${timestamp}] ${name} - ${type === 'login' ? '로그인' : '자동접속'} (IP: ${ip})\n`;
+    fs.appendFileSync(ACCESS_LOG_PATH, logMessage);
+  } catch (error) {
+    console.error('❌ [Log Error]', error);
+  }
+};
+
+
+
 const client = new ChzzkClient();
 
 // 룰렛 추가를 후원자에게만 허용할지 여부
@@ -375,11 +391,26 @@ app.post('/login', async (req, res) => {
   }
 
   if (isValid) {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    logAccess(user.name, 'login', String(ip));
     res.json({ success: true, role: user.role, name: user.name, chnnelid: user.chnnelid });
   } else {
     res.status(401).json({ success: false, error: '아이디 또는 비밀번호가 틀렸습니다.' });
   }
 });
+
+app.post('/log-access', (req, res) => {
+  const { name } = req.body;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  if (name) {
+    logAccess(name, 'access', String(ip));
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ error: 'Name required' });
+  }
+});
+
+
 
 app.get('/users-config', (req, res) => {
   if (!fs.existsSync(USERS_PATH)) return res.json([]);
@@ -575,7 +606,7 @@ app.post('/quiz/reset', (req, res) => {
 });
 
 // [최적화된 Catch-all] API 경로가 아닌 요청만 React로 전달
-const API_PREFIXES = ['/missions', '/login', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz'];
+const API_PREFIXES = ['/missions', '/login', '/log-access', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz'];
 
 app.use((req, res, next) => {
   const isApi = API_PREFIXES.some(prefix => req.path.startsWith(prefix));

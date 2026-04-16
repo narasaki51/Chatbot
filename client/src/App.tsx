@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { RotateCcw, PartyPopper, Sparkles, Zap, Trash2, Settings2, EyeOff, Eye, Users, Lock } from 'lucide-react';
+import { RotateCcw, PartyPopper, Sparkles, Zap, Trash2, Settings2, EyeOff, Eye, Users, Lock, Crown } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import RatingViewer from './RatingViewer';
 import QuizShow from './QuizShow';
@@ -115,6 +115,18 @@ const AppMain: React.FC = () => {
     };
   }, [SOCKET_URL]);
 
+  // 접속 로그 기록 (로그인 상태로 새로고침/접속 시)
+  useEffect(() => {
+    if (user) {
+      fetch(`${SOCKET_URL}/log-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: user.name })
+      }).catch(err => console.error("Log access error:", err));
+    }
+  }, []); // 마운트 시 최초 1회만 실행
+
+
   const toggleCheeseEnabled = () => {
     const nextVal = !isCheeseEnabled;
     setIsCheeseEnabled(nextVal);
@@ -182,9 +194,10 @@ const AppMain: React.FC = () => {
   }
 
   // 1. 멤버가 로그인하면 로가다 탭으로 화면 고정 (사다리/룰렛은 허용)
-  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette' && view !== 'feedback') {
+  if (user.role === 'member' && view !== 'group' && view !== 'ladder' && view !== 'roulette' && view !== 'rating' && view !== 'pok_roulette' && view !== 'feedback' && view !== 'quiz') {
     setView('group');
   }
+
   // 2. 게스트가 로그인하면 룰렛 탭으로 화면 고정 (사다리 허용)
   if (user.role === 'guest' && view !== 'roulette' && view !== 'ladder' && view !== 'pok_roulette') {
     setView('roulette');
@@ -2446,6 +2459,16 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                 {/* 캐릭터 정보 */}
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                    {rank === 1 && (
+                      <motion.div
+                        initial={{ y: -2, opacity: 0 }}
+                        animate={{ y: [-2, -5, -2], opacity: 1 }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                        style={{ color: '#ffd700', filter: 'drop-shadow(0 0 8px #ffd700aa)', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Crown size={18} fill="#ffd70055" />
+                      </motion.div>
+                    )}
                     <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#fff' }}>{char.characterName}</span>
                     {char.jobName && <span style={{ fontSize: '0.82rem', color: '#a78bfa', background: '#1e1030', padding: '1px 8px', borderRadius: '4px', border: '1px solid #4c1d95' }}>{char.jobName}</span>}
                     {isOnFire && (
