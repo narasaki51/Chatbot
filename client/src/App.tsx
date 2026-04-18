@@ -2426,7 +2426,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
 
       {/* 고정 대결 하이라이트 */}
       {pinnedBattles.length > 0 && (
-        <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {pinnedBattles.map(b => {
             const bCfg = LEAGUE_CONFIG[b.league as RatingLeague] || cfg;
             const winnerName = b.winnerId === b.challengerId ? b.challengerName
@@ -2435,45 +2435,38 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
             return (
               <div key={b.id} className="highlight-card" style={{
                 background: `linear-gradient(135deg, ${bCfg.color}18 0%, #0d0d0d 100%)`,
-                border: `2px solid ${bCfg.color}88`,
-                borderRadius: '16px',
-                padding: '18px 22px',
+                border: `1px solid ${bCfg.color}88`,
+                borderRadius: '10px',
+                padding: '10px 14px',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
                 gap: '10px',
+                flexWrap: 'wrap',
                 ['--hl-color' as any]: `${bCfg.color}55`,
                 ['--hl-border' as any]: `${bCfg.color}88`,
                 ['--hl-border-bright' as any]: `${bCfg.color}cc`,
               }}>
-                {/* 상단: 배지 + 참가자 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ background: `${bCfg.color}33`, color: bCfg.color, border: `1px solid ${bCfg.color}77`, borderRadius: '20px', padding: '3px 12px', fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap' }}>🔒 {bCfg.label}</span>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    {[
-                      { id: b.challengerId, name: b.challengerName, member: b.challengerMember },
-                      { id: b.defenderId, name: b.defenderName, member: b.defenderMember },
-                      ...(b.intruderId ? [{ id: b.intruderId, name: b.intruderName, member: b.intruderMember }] : [])
-                    ].map((p, i) => {
-                      const isWinner = b.winnerId === p.id;
-                      const isLoser = b.loserIds ? b.loserIds.includes(p.id) : b.loserId === p.id;
-                      return (
-                        <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          {i > 0 && <span style={{ color: '#555', fontWeight: 900, margin: '0 4px' }}>vs</span>}
-                          <span style={{ fontWeight: 900, fontSize: '1rem', color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff' }}>{p.name}</span>
-                          <span style={{ fontSize: '0.78rem', color: '#666' }}>({p.member})</span>
-                        </span>
-                      );
-                    })}
-                    <span style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: 900 }}>
-                      🏆 {winnerName} 승리 · {b.isTriple ? '승+50 / 패-20' : `±${b.ratingChange}점`}
-                    </span>
-                  </div>
+                <span style={{ background: `${bCfg.color}33`, color: bCfg.color, border: `1px solid ${bCfg.color}77`, borderRadius: '20px', padding: '2px 10px', fontSize: '0.7rem', fontWeight: 900, whiteSpace: 'nowrap' }}>🔒 {bCfg.label}</span>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: b.challengerId, name: b.challengerName, member: b.challengerMember },
+                    { id: b.defenderId, name: b.defenderName, member: b.defenderMember },
+                    ...(b.intruderId ? [{ id: b.intruderId, name: b.intruderName, member: b.intruderMember }] : [])
+                  ].map((p, i) => {
+                    const isWinner = b.winnerId === p.id;
+                    const isLoser = b.loserIds ? b.loserIds.includes(p.id) : b.loserId === p.id;
+                    return (
+                      <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        {i > 0 && <span style={{ color: '#555', fontWeight: 900, margin: '0 2px', fontSize: '0.75rem' }}>vs</span>}
+                        <span style={{ fontWeight: 900, fontSize: '0.88rem', color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff' }}>{p.name}</span>
+                        <span style={{ fontSize: '0.72rem', color: '#555' }}>({p.member})</span>
+                      </span>
+                    );
+                  })}
+                  <span style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 900 }}>🏆 {winnerName} 승리 · {b.isTriple ? '승+50/패-20' : `±${b.ratingChange}`}</span>
                 </div>
-                {/* 메모 */}
                 {b.memo && (
-                  <div style={{ fontSize: '0.85rem', color: '#cbd5e1', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '8px 14px' }}>
-                    📝 {b.memo}
-                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', padding: '2px 10px', whiteSpace: 'nowrap', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }}>📝 {b.memo}</span>
                 )}
               </div>
             );
