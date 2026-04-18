@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Crown, Shuffle, ExternalLink, History as HistoryIcon, Search } from 'lucide-react';
+import { io } from 'socket.io-client';
+
+const IS_DEV = window.location.port === '5173';
+const SOCKET_URL = IS_DEV ? `http://${window.location.hostname}:4000` : '';
+const socket = io(SOCKET_URL);
 
 interface TournamentProps {
   user: {
@@ -46,41 +51,48 @@ const LEAGUES: Record<TournamentLeague, { label: string; score: string; color: s
   master: { label: '마스터리그', score: '7000점+', color: '#a78bfa', bg: 'linear-gradient(135deg, #1e1030 0%, #0a0510 100%)' },
 };
 
+const initialMatches = (size: BracketSize): Match[] => Array.from({ length: size === 16 ? 15 : 7 }, (_, i) => ({ id: `m${i}` }));
+
+const DEFAULT_DATA: Record<TournamentLeague, LeagueData> = {
+  bronze: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
+  silver: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
+  gold:   { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
+  master: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
+};
+
 const Tournament: React.FC<TournamentProps> = ({ user }) => {
   const [activeLeague, setActiveLeague] = useState<TournamentLeague>('bronze');
   const [tab, setTab] = useState<'bracket' | 'history'>('bracket');
-
-  const initialMatches = (size: BracketSize): Match[] => Array.from({ length: size === 16 ? 15 : 7 }, (_, i) => ({ id: `m${i}` }));
-
-  const [tournamentData, setTournamentData] = useState<Record<TournamentLeague, LeagueData>>(() => {
-    const saved = localStorage.getItem('tournament_data_v1');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return {
-      bronze: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
-      silver: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
-      gold: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
-      master: { matches: initialMatches(8), participants: [], bracketSize: 8, isStarted: false },
-    };
-  });
-
-  const [history, setHistory] = useState<TournamentHistory[]>(() => {
-    const saved = localStorage.getItem('tournament_history');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [tournamentData, setTournamentData] = useState<Record<TournamentLeague, LeagueData>>(DEFAULT_DATA);
+  const [history, setHistory] = useState<TournamentHistory[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
   const isAdmin = user.role === 'admin' || user.role === 'host';
   const currentData = tournamentData[activeLeague];
 
-  useEffect(() => {
-    localStorage.setItem('tournament_data_v1', JSON.stringify(tournamentData));
-  }, [tournamentData]);
+  const saveToServer = (leagues: Record<TournamentLeague, LeagueData>, hist: TournamentHistory[]) => {
+    fetch(`${SOCKET_URL}/tournament`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagues, history: hist }),
+    }).catch(console.error);
+  };
 
   useEffect(() => {
-    localStorage.setItem('tournament_history', JSON.stringify(history));
-  }, [history]);
+    fetch(`${SOCKET_URL}/tournament`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.leagues) setTournamentData(data.leagues);
+        if (data.history) setHistory(data.history);
+      })
+      .catch(console.error);
+
+    const onUpdate = (data: any) => {
+      if (data.leagues) setTournamentData(data.leagues);
+      if (data.history) setHistory(data.history);
+    };
+    socket.on('tournamentUpdate', onUpdate);
+    return () => { socket.off('tournamentUpdate', onUpdate); };
+  }, []);
 
   const openLopec = (name: string) => {
     if (!name.trim()) return;
@@ -92,102 +104,87 @@ const Tournament: React.FC<TournamentProps> = ({ user }) => {
     if (currentData.participants.length > 0) {
       if (!confirm('인원수를 변경하면 대진표가 초기화됩니다.')) return;
     }
-    setTournamentData(prev => ({
-      ...prev,
-      [activeLeague]: { matches: initialMatches(size), participants: [], bracketSize: size, isStarted: false }
-    }));
+    const next = { ...tournamentData, [activeLeague]: { matches: initialMatches(size), participants: [], bracketSize: size, isStarted: false } };
+    setTournamentData(next);
+    saveToServer(next, history);
   };
 
   const addParticipant = () => {
     if (currentData.isStarted) return;
     const name = newPlayerName.trim();
     if (!name || currentData.participants.length >= currentData.bracketSize) return;
-    
     const newP = { id: `p_${Date.now()}`, name };
-    setTournamentData(prev => {
-      const league = prev[activeLeague];
-      const updatedParticipants = [...league.participants, newP];
-      const updatedMatches = league.matches.map(m => ({ ...m }));
-      const firstRoundCount = league.bracketSize / 2;
-      for (let i = 0; i < firstRoundCount; i++) {
-        if (!updatedMatches[i].p1) { updatedMatches[i].p1 = newP; break; }
-        if (!updatedMatches[i].p2) { updatedMatches[i].p2 = newP; break; }
-      }
-      return { ...prev, [activeLeague]: { ...league, participants: updatedParticipants, matches: updatedMatches } };
-    });
+    const league = currentData;
+    const updatedParticipants = [...league.participants, newP];
+    const updatedMatches = league.matches.map(m => ({ ...m }));
+    const firstRoundCount = league.bracketSize / 2;
+    for (let i = 0; i < firstRoundCount; i++) {
+      if (!updatedMatches[i].p1) { updatedMatches[i].p1 = newP; break; }
+      if (!updatedMatches[i].p2) { updatedMatches[i].p2 = newP; break; }
+    }
+    const next = { ...tournamentData, [activeLeague]: { ...league, participants: updatedParticipants, matches: updatedMatches } };
+    setTournamentData(next);
+    saveToServer(next, history);
     setNewPlayerName('');
   };
 
   const shuffleParticipants = () => {
     if (currentData.isStarted || currentData.participants.length < 2) return;
-    setTournamentData(prev => {
-      const league = prev[activeLeague];
-      const shuffled = [...league.participants].sort(() => Math.random() - 0.5);
-      const updatedMatches = initialMatches(league.bracketSize);
-      shuffled.forEach((p, idx) => {
-        const matchIdx = Math.floor(idx / 2);
-        if (idx % 2 === 0) updatedMatches[matchIdx].p1 = p;
-        else updatedMatches[matchIdx].p2 = p;
-      });
-      return { ...prev, [activeLeague]: { ...league, matches: updatedMatches } };
+    const league = currentData;
+    const shuffled = [...league.participants].sort(() => Math.random() - 0.5);
+    const updatedMatches = initialMatches(league.bracketSize);
+    shuffled.forEach((p, idx) => {
+      const matchIdx = Math.floor(idx / 2);
+      if (idx % 2 === 0) updatedMatches[matchIdx].p1 = p;
+      else updatedMatches[matchIdx].p2 = p;
     });
+    const next = { ...tournamentData, [activeLeague]: { ...league, matches: updatedMatches } };
+    setTournamentData(next);
+    saveToServer(next, history);
   };
 
   const setWinner = (matchIdx: number, winner: Participant) => {
     if (!isAdmin || !currentData.isStarted) return;
-    setTournamentData(prev => {
-      const league = { ...prev[activeLeague] };
-      const matches = league.matches.map(m => ({ ...m }));
-      matches[matchIdx].winnerId = winner.id;
-
-      let nextMatchIdx = -1;
-      let isP1 = false;
-
-      if (league.bracketSize === 16) {
-        if (matchIdx < 8) { nextMatchIdx = 8 + Math.floor(matchIdx / 2); isP1 = matchIdx % 2 === 0; }
-        else if (matchIdx < 12) { nextMatchIdx = 12 + Math.floor((matchIdx - 8) / 2); isP1 = matchIdx % 2 === 0; }
-        else if (matchIdx < 14) { nextMatchIdx = 14; isP1 = matchIdx % 2 === 0; }
-      } else {
-        if (matchIdx < 4) { nextMatchIdx = 4 + Math.floor(matchIdx / 2); isP1 = matchIdx % 2 === 0; }
-        else if (matchIdx < 6) { nextMatchIdx = 6; isP1 = matchIdx % 2 === 0; }
-      }
-
-      if (nextMatchIdx !== -1) {
-        if (isP1) matches[nextMatchIdx].p1 = winner;
-        else matches[nextMatchIdx].p2 = winner;
-      }
-      return { ...prev, [activeLeague]: { ...league, matches } };
-    });
+    const league = { ...currentData };
+    const matches = league.matches.map(m => ({ ...m }));
+    matches[matchIdx].winnerId = winner.id;
+    let nextMatchIdx = -1;
+    let isP1 = false;
+    if (league.bracketSize === 16) {
+      if (matchIdx < 8) { nextMatchIdx = 8 + Math.floor(matchIdx / 2); isP1 = matchIdx % 2 === 0; }
+      else if (matchIdx < 12) { nextMatchIdx = 12 + Math.floor((matchIdx - 8) / 2); isP1 = matchIdx % 2 === 0; }
+      else if (matchIdx < 14) { nextMatchIdx = 14; isP1 = matchIdx % 2 === 0; }
+    } else {
+      if (matchIdx < 4) { nextMatchIdx = 4 + Math.floor(matchIdx / 2); isP1 = matchIdx % 2 === 0; }
+      else if (matchIdx < 6) { nextMatchIdx = 6; isP1 = matchIdx % 2 === 0; }
+    }
+    if (nextMatchIdx !== -1) {
+      if (isP1) matches[nextMatchIdx].p1 = winner;
+      else matches[nextMatchIdx].p2 = winner;
+    }
+    const next = { ...tournamentData, [activeLeague]: { ...league, matches } };
+    setTournamentData(next);
+    saveToServer(next, history);
   };
 
   const finalizeHistory = () => {
     const finalIdx = currentData.bracketSize === 16 ? 14 : 6;
     const winnerId = currentData.matches[finalIdx].winnerId;
     const winner = [currentData.matches[finalIdx].p1, currentData.matches[finalIdx].p2].find(p => p?.id === winnerId);
-    
     if (!winner) { alert('최종 우승자가 결정되지 않았습니다.'); return; }
     if (!confirm(`${winner.name} 선수의 우승으로 종료하시겠습니까?`)) return;
-
-    setHistory(prev => [{
-      id: `h_${Date.now()}`,
-      league: LEAGUES[activeLeague].label,
-      winnerName: winner.name,
-      date: new Date().toLocaleDateString(),
-      participantsCount: currentData.participants.length
-    }, ...prev]);
-    
-    setTournamentData(prev => ({
-      ...prev,
-      [activeLeague]: { matches: initialMatches(currentData.bracketSize), participants: [], bracketSize: currentData.bracketSize, isStarted: false }
-    }));
+    const newHistory = [{ id: `h_${Date.now()}`, league: LEAGUES[activeLeague].label, winnerName: winner.name, date: new Date().toLocaleDateString(), participantsCount: currentData.participants.length }, ...history];
+    const next = { ...tournamentData, [activeLeague]: { matches: initialMatches(currentData.bracketSize), participants: [], bracketSize: currentData.bracketSize, isStarted: false } };
+    setHistory(newHistory);
+    setTournamentData(next);
+    saveToServer(next, newHistory);
   };
 
   const resetTournament = () => {
     if (!confirm('초기화하시겠습니까?')) return;
-    setTournamentData(prev => ({
-      ...prev,
-      [activeLeague]: { matches: initialMatches(currentData.bracketSize), participants: [], bracketSize: currentData.bracketSize, isStarted: false }
-    }));
+    const next = { ...tournamentData, [activeLeague]: { matches: initialMatches(currentData.bracketSize), participants: [], bracketSize: currentData.bracketSize, isStarted: false } };
+    setTournamentData(next);
+    saveToServer(next, history);
   };
 
   return (
@@ -218,8 +215,8 @@ const Tournament: React.FC<TournamentProps> = ({ user }) => {
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <span style={{ color: '#888', fontWeight: 900 }}>인원수:</span>
                   {[8, 16].map(s => <button key={s} disabled={currentData.isStarted} onClick={() => handleSizeChange(s as BracketSize)} style={{ background: currentData.bracketSize === s ? LEAGUES[activeLeague].color : '#222', color: 'white', border: 'none', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: 900 }}>{s}인</button>)}
-                  <input value={newPlayerName} disabled={currentData.isStarted} 
-                    onChange={e => setNewPlayerName(e.target.value)} 
+                  <input value={newPlayerName} disabled={currentData.isStarted}
+                    onChange={e => setNewPlayerName(e.target.value)}
                     onKeyDown={e => {
                       if (e.nativeEvent.isComposing) return;
                       if (e.key === 'Enter') addParticipant();
@@ -231,7 +228,7 @@ const Tournament: React.FC<TournamentProps> = ({ user }) => {
                   <button onClick={shuffleParticipants} disabled={currentData.isStarted} style={{ background: '#222', color: 'white', border: '1px solid #444', padding: '9px 18px', borderRadius: '100px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                     <Shuffle size={14} /> 섞기
                   </button>
-                  <button onClick={() => setTournamentData(prev => ({ ...prev, [activeLeague]: { ...prev[activeLeague], isStarted: true } }))} style={{ background: '#4ade80', color: 'black', border: 'none', padding: '9px 25px', borderRadius: '100px', fontWeight: 900, cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>시작</button>
+                  <button onClick={() => { const next = { ...tournamentData, [activeLeague]: { ...tournamentData[activeLeague], isStarted: true } }; setTournamentData(next); saveToServer(next, history); }} style={{ background: '#4ade80', color: 'black', border: 'none', padding: '9px 25px', borderRadius: '100px', fontWeight: 900, cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>시작</button>
                   <button onClick={resetTournament} style={{ border: '1px solid #4b1515', color: '#ff4b4b', background: 'transparent', padding: '9px 18px', borderRadius: '100px', fontWeight: 900, cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>초기화</button>
                   <button onClick={finalizeHistory} style={{ background: '#4ade80', color: 'black', border: 'none', padding: '9px 25px', borderRadius: '100px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                     <HistoryIcon size={14} /> 종료 & 기록
@@ -248,7 +245,7 @@ const Tournament: React.FC<TournamentProps> = ({ user }) => {
                   </BracketColumn>
                 )}
                 <BracketColumn title="8강" color={LEAGUES[activeLeague].color}>
-                  {currentData.bracketSize === 16 
+                  {currentData.bracketSize === 16
                     ? [8, 9, 10, 11].map(i => <MatchNode key={i} match={currentData.matches[i]} onWinner={(p) => setWinner(i, p)} isAdmin={isAdmin} isStarted={currentData.isStarted} onLopec={openLopec} themeColor={LEAGUES[activeLeague].color} />)
                     : [0, 1, 2, 3].map(i => <MatchNode key={i} match={currentData.matches[i]} onWinner={(p) => setWinner(i, p)} isAdmin={isAdmin} isStarted={currentData.isStarted} onLopec={openLopec} themeColor={LEAGUES[activeLeague].color} />)
                   }
@@ -267,7 +264,6 @@ const Tournament: React.FC<TournamentProps> = ({ user }) => {
           </motion.div>
         ) : (
           <motion.div key="history">
-            {/* 히스토리 생략 (데이터 호환 가능) */}
             <div style={{ background: '#111', padding: '30px', borderRadius: '20px' }}>
               <h2 style={{ color: 'white', fontWeight: 900, marginBottom: '20px' }}>기록실</h2>
               {history.map(h => (

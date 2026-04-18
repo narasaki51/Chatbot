@@ -1,0 +1,117 @@
+{
+  "leagues": {
+    "bronze": {
+      "matches": [
+        {
+          "id": "m0"
+        },
+        {
+          "id": "m1"
+        },
+        {
+          "id": "m2"
+        },
+        {
+          "id": "m3"
+        },
+        {
+          "id": "m4"
+        },
+        {
+          "id": "m5"
+        },
+        {
+          "id": "m6"
+        }
+      ],
+      "participants": [],
+      "bracketSize": 8,
+      "isStarted": false
+    },
+    "silver": {
+      "matches": [
+        {
+          "id": "m0"
+        },
+        {
+          "id": "m1"
+        },
+        {
+          "id": "m2"
+        },
+        {
+          "id": "m3"
+        },
+        {
+          "id": "m4"
+        },
+        {
+          "id": "m5"
+        },
+        {
+          "id": "m6"
+        }
+      ],
+      "participants": [],
+      "bracketSize": 8,
+      "isStarted": false
+    },
+    "gold": {
+      "matches": [
+        {
+          "id": "m0"
+        },
+        {
+          "id": "m1"
+        },
+        {
+          "id": "m2"
+        },
+        {
+          "id": "m3"
+        },
+        {
+          "id": "m4"
+        },
+        {
+          "id": "m5"
+        },
+        {
+          "id": "m6"
+        }
+      ],
+      "participants": [],
+      "bracketSize": 8,
+      "isStarted": false
+    },
+    "master": {
+      "matches": [
+        {
+          "id": "m0"
+        },
+        {
+          "id": "m1"
+        },
+        {
+          "id": "m2"
+        },
+        {
+          "id": "m3"
+        },
+        {
+          "id": "m4"
+        },
+        {
+          "id": "m5"
+        },
+        {
+          "id": "m6"
+        }
+      ],
+      "participants": [],
+      "bracketSize": 8,
+      "isStarted": false
+    }
+  },
+  "history": []
+}

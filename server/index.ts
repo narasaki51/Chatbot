@@ -606,7 +606,7 @@ app.post('/quiz/reset', (req, res) => {
 });
 
 // [최적화된 Catch-all] API 경로가 아닌 요청만 React로 전달
-const API_PREFIXES = ['/missions', '/login', '/log-access', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz'];
+const API_PREFIXES = ['/missions', '/login', '/log-access', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz', '/tournament'];
 
 app.use((req, res, next) => {
   const isApi = API_PREFIXES.some(prefix => req.path.startsWith(prefix));
@@ -1155,6 +1155,35 @@ app.delete('/rating/battle/:id', (req, res) => {
   db.battles = db.battles.filter((b: any) => b.id !== req.params.id);
   saveRatingDB(db);
   io.emit('ratingUpdate', db);
+  res.json({ success: true });
+});
+
+// ==================== 토너먼트 ====================
+const TOURNAMENT_DB_PATH = path.join(__dirname, 'tournament_db.json');
+const initTournamentMatches = (size: number) => Array.from({ length: size === 16 ? 15 : 7 }, (_, i) => ({ id: `m${i}` }));
+const DEFAULT_TOURNAMENT_DB = {
+  leagues: {
+    bronze: { matches: initTournamentMatches(8), participants: [], bracketSize: 8, isStarted: false },
+    silver: { matches: initTournamentMatches(8), participants: [], bracketSize: 8, isStarted: false },
+    gold:   { matches: initTournamentMatches(8), participants: [], bracketSize: 8, isStarted: false },
+    master: { matches: initTournamentMatches(8), participants: [], bracketSize: 8, isStarted: false },
+  },
+  history: [] as any[],
+};
+if (!fs.existsSync(TOURNAMENT_DB_PATH)) {
+  fs.writeFileSync(TOURNAMENT_DB_PATH, JSON.stringify(DEFAULT_TOURNAMENT_DB, null, 2));
+}
+const getTournamentDB = () => JSON.parse(fs.readFileSync(TOURNAMENT_DB_PATH, 'utf-8'));
+const saveTournamentDB = (data: any) => fs.writeFileSync(TOURNAMENT_DB_PATH, JSON.stringify(data, null, 2));
+
+app.get('/tournament', (req, res) => res.json(getTournamentDB()));
+
+app.post('/tournament', (req, res) => {
+  const { leagues, history } = req.body;
+  if (!leagues) return res.status(400).json({ error: 'leagues 필요' });
+  const db = { leagues, history: history || [] };
+  saveTournamentDB(db);
+  io.emit('tournamentUpdate', db);
   res.json({ success: true });
 });
 
