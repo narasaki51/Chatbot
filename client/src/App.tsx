@@ -2433,15 +2433,17 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
               : b.winnerId === b.defenderId ? b.defenderName
               : b.intruderName;
             return (
-              <div key={b.id} style={{
+              <div key={b.id} className="highlight-card" style={{
                 background: `linear-gradient(135deg, ${bCfg.color}18 0%, #0d0d0d 100%)`,
                 border: `2px solid ${bCfg.color}88`,
                 borderRadius: '16px',
                 padding: '18px 22px',
-                boxShadow: `0 0 20px ${bCfg.color}33`,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
+                ['--hl-color' as any]: `${bCfg.color}55`,
+                ['--hl-border' as any]: `${bCfg.color}88`,
+                ['--hl-border-bright' as any]: `${bCfg.color}cc`,
               }}>
                 {/* 상단: 배지 + 참가자 */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>

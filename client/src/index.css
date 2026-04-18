@@ -251,3 +251,31 @@ body.overlay-mode {
   position: relative;
   z-index: 1;
 }
+
+@keyframes highlightPulse {
+  0%   { box-shadow: 0 0 10px 2px var(--hl-color, #a78bfa55), 0 0 30px 6px var(--hl-color, #a78bfa22); border-color: var(--hl-border, #a78bfa88); }
+  50%  { box-shadow: 0 0 22px 6px var(--hl-color, #a78bfa88), 0 0 55px 14px var(--hl-color, #a78bfa44); border-color: var(--hl-border-bright, #a78bfacc); }
+  100% { box-shadow: 0 0 10px 2px var(--hl-color, #a78bfa55), 0 0 30px 6px var(--hl-color, #a78bfa22); border-color: var(--hl-border, #a78bfa88); }
+}
+
+@keyframes highlightShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.highlight-card {
+  animation: highlightPulse 2.8s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.highlight-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.045) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: highlightShimmer 3.5s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
