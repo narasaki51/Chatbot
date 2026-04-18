@@ -773,7 +773,7 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
 
   return (
     <>
-      {(user.role === 'admin' || user.name === '찌모') && (
+      {(user.role === 'admin' || user.role === 'host') && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '10px' }}>
           <label style={{
             display: 'flex', alignItems: 'center', gap: '10px',
@@ -2132,7 +2132,7 @@ const FeedbackBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
         <h2 style={{ margin: '0 0 10px 0', color: '#ff6a00', fontWeight: 900, fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Sparkles size={28} /> 피드백 & 건의
         </h2>
-        <p style={{ color: '#888', fontSize: '1rem', marginBottom: '25px' }}>방송 시스템 개선을 위한 제안이나 버그 제보를 자유롭게 남겨주세요.</p>
+        <p style={{ color: '#888', fontSize: '1rem', marginBottom: '25px' }}>의견이나 버그 제보 남겨주세요. 빠른 수정을 위해선 인게임닉 : 이카사란 or 디코 narasaki1498, 나라사키#3266 으로 dm주시면 빠르게 확인가능</p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <textarea
@@ -2239,6 +2239,8 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const [battleListOpen, setBattleListOpen] = useState(true);
   const [submittingBattleId, setSubmittingBattleId] = useState<string | null>(null);
   const [matchmakingGuestId, setMatchmakingGuestId] = useState<string | null>(null);
+  const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+  const [editMemo, setEditMemo] = useState('');
 
 
   const API = SOCKET_URL;
@@ -2365,6 +2367,17 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
     setSubmittingBattleId(null);
   };
 
+  // 메모 저장
+  const handleMemoSave = async (battleId: string) => {
+    await fetch(`${API}/rating/battle/${battleId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'memo', memo: editMemo }),
+    });
+    setEditingMemoId(null);
+    setEditMemo('');
+  };
+
   // 대결 삭제
   const handleBattleDelete = async (battleId: string) => {
     if (!confirm('대결 기록을 삭제하시겠습니까?')) return;
@@ -2380,6 +2393,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   const myLeagueChar = characters.find(c => c.memberName === user.name && c.league === activeLeague) || null;
   // 현재 리그 대결 목록
   const leagueBattles = battles.filter(b => b.league === activeLeague);
+  const pinnedBattles = battles.filter(b => b.locked);
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return '🥇';
@@ -2409,6 +2423,61 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
           );
         })}
       </div>
+
+      {/* 고정 대결 하이라이트 */}
+      {pinnedBattles.length > 0 && (
+        <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {pinnedBattles.map(b => {
+            const bCfg = LEAGUE_CONFIG[b.league as RatingLeague] || cfg;
+            const winnerName = b.winnerId === b.challengerId ? b.challengerName
+              : b.winnerId === b.defenderId ? b.defenderName
+              : b.intruderName;
+            return (
+              <div key={b.id} style={{
+                background: `linear-gradient(135deg, ${bCfg.color}18 0%, #0d0d0d 100%)`,
+                border: `2px solid ${bCfg.color}88`,
+                borderRadius: '16px',
+                padding: '18px 22px',
+                boxShadow: `0 0 20px ${bCfg.color}33`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}>
+                {/* 상단: 배지 + 참가자 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ background: `${bCfg.color}33`, color: bCfg.color, border: `1px solid ${bCfg.color}77`, borderRadius: '20px', padding: '3px 12px', fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap' }}>🔒 {bCfg.label}</span>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {[
+                      { id: b.challengerId, name: b.challengerName, member: b.challengerMember },
+                      { id: b.defenderId, name: b.defenderName, member: b.defenderMember },
+                      ...(b.intruderId ? [{ id: b.intruderId, name: b.intruderName, member: b.intruderMember }] : [])
+                    ].map((p, i) => {
+                      const isWinner = b.winnerId === p.id;
+                      const isLoser = b.loserIds ? b.loserIds.includes(p.id) : b.loserId === p.id;
+                      return (
+                        <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {i > 0 && <span style={{ color: '#555', fontWeight: 900, margin: '0 4px' }}>vs</span>}
+                          <span style={{ fontWeight: 900, fontSize: '1rem', color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff' }}>{p.name}</span>
+                          <span style={{ fontSize: '0.78rem', color: '#666' }}>({p.member})</span>
+                        </span>
+                      );
+                    })}
+                    <span style={{ fontSize: '0.85rem', color: '#4ade80', fontWeight: 900 }}>
+                      🏆 {winnerName} 승리 · {b.isTriple ? '승+50 / 패-20' : `±${b.ratingChange}점`}
+                    </span>
+                  </div>
+                </div>
+                {/* 메모 */}
+                {b.memo && (
+                  <div style={{ fontSize: '0.85rem', color: '#cbd5e1', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '8px 14px' }}>
+                    📝 {b.memo}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* 리그 헤더 */}
       <div style={{ background: cfg.bg, border: `1px solid ${cfg.color}33`, borderRadius: '16px', padding: '20px 24px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2696,7 +2765,9 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
               const isSubmitting = submittingBattleId === b.id;
 
               return (
-                <div key={b.id} style={{ background: '#0d0d0d', border: `1px solid ${statusColor}33`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <div key={b.id} style={{ background: '#0d0d0d', border: `1px solid ${statusColor}33`, borderRadius: '12px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* 메인 행 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   {/* 상태 뱃지 */}
                   <span style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}55`, borderRadius: '20px', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 900, whiteSpace: 'nowrap' }}>{statusLabel}</span>
 
@@ -2773,11 +2844,49 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                       </>
                     )}
 
-                    {/* 삭제 - admin만 */}
-                    {isAdmin && (
+                    {/* 잠금/해제 + 삭제 - admin만 */}
+                    {isAdmin && isCompleted && (
+                      <button onClick={() => handleBattleAction(b.id, b.locked ? 'unlock' : 'lock')} style={{ background: b.locked ? '#1a2a1a' : '#1a1a2a', color: b.locked ? '#4ade80' : '#94a3b8', border: `1px solid ${b.locked ? '#166534' : '#334155'}`, padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
+                        {b.locked ? '🔒 고정됨' : '🔓 고정'}
+                      </button>
+                    )}
+                    {isAdmin && !b.locked && (
                       <button onClick={() => handleBattleDelete(b.id)} style={{ background: '#2a1515', color: '#f87171', border: '1px solid #7f1d1d', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>🗑 삭제</button>
                     )}
                   </div>
+                  </div>{/* 메인 행 끝 */}
+
+                  {/* 메모 영역 */}
+                  {editingMemoId === b.id ? (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        value={editMemo}
+                        onChange={e => setEditMemo(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleMemoSave(b.id); if (e.key === 'Escape') { setEditingMemoId(null); setEditMemo(''); } }}
+                        maxLength={200}
+                        autoFocus
+                        placeholder="메모 입력 (최대 200자)"
+                        style={{ flex: 1, background: '#111', border: '1px solid #444', borderRadius: '8px', padding: '6px 12px', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                      <button onClick={() => handleMemoSave(b.id)} style={{ background: '#a78bfa', color: '#000', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>저장</button>
+                      <button onClick={() => { setEditingMemoId(null); setEditMemo(''); }} style={{ background: '#1a1a1a', color: '#666', border: '1px solid #333', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}>취소</button>
+                    </div>
+                  ) : (b.memo || isAdmin || user.role === 'host') && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '24px' }}>
+                      {b.memo ? (
+                        <span style={{ fontSize: '0.82rem', color: '#cbd5e1', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', padding: '4px 12px', flex: 1 }}>
+                          📝 {b.memo}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', color: '#444' }}>메모 없음</span>
+                      )}
+                      {(isAdmin || user.role === 'host') && (
+                        <button onClick={() => { setEditingMemoId(b.id); setEditMemo(b.memo || ''); }} style={{ background: 'transparent', color: '#64748b', border: '1px solid #334155', padding: '3px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                          ✏️ {b.memo ? '수정' : '메모 추가'}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

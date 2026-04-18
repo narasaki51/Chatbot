@@ -53,7 +53,7 @@
       "status": "completed",
       "ratingChange": 50,
       "createdAt": "2026-04-14T12:52:14.811Z",
-      "updatedAt": "2026-04-14T12:55:30.159Z",
+      "updatedAt": "2026-04-18T08:18:38.330Z",
       "intruderId": "1776171078564_ep5za",
       "intruderName": "서씨가문의수치",
       "intruderMember": "서씨",
@@ -63,7 +63,9 @@
         "1776169132455_dx68h",
         "1776171078564_ep5za"
       ],
-      "isTriple": true
+      "isTriple": true,
+      "memo": "갱쥰이 개처발림",
+      "locked": true
     }
   ]
 }

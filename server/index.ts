@@ -1005,7 +1005,30 @@ app.patch('/rating/battle/:id', (req, res) => {
   const battle = db.battles.find((b: any) => b.id === req.params.id);
   if (!battle) return res.status(404).json({ success: false, message: '대결 없음' });
 
-  if (action === 'accept') {
+  if (action === 'memo') {
+    const { memo } = req.body;
+    battle.memo = typeof memo === 'string' ? memo.slice(0, 200) : '';
+    battle.updatedAt = new Date().toISOString();
+    saveRatingDB(db);
+    io.emit('ratingUpdate', db);
+    return res.json({ success: true, battle });
+
+  } else if (action === 'lock') {
+    if (battle.status !== 'completed') return res.status(400).json({ success: false, message: '완료된 대결만 고정 가능' });
+    battle.locked = true;
+    battle.updatedAt = new Date().toISOString();
+    saveRatingDB(db);
+    io.emit('ratingUpdate', db);
+    return res.json({ success: true, battle });
+
+  } else if (action === 'unlock') {
+    battle.locked = false;
+    battle.updatedAt = new Date().toISOString();
+    saveRatingDB(db);
+    io.emit('ratingUpdate', db);
+    return res.json({ success: true, battle });
+
+  } else if (action === 'accept') {
     battle.status = 'accepted';
     battle.updatedAt = new Date().toISOString();
 
@@ -1120,6 +1143,7 @@ app.delete('/rating/battle/:id', (req, res) => {
   const db = ensureBattles(getRatingDB());
   const battle = db.battles.find((b: any) => b.id === req.params.id);
   if (!battle) return res.status(404).json({ success: false, message: '대결 없음' });
+  if (battle.locked) return res.status(403).json({ success: false, message: '고정된 대결은 삭제할 수 없습니다' });
 
   // 완료된 대결이면 승패/레이팅 원복
   if (battle.status === 'completed' && battle.winnerId) {
