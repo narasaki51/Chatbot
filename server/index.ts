@@ -540,7 +540,17 @@ app.delete('/feedbacks/:id', (req, res) => {
 });
 
 // ==================== 퀴즈쇼 API ====================
+const QUIZ_LOG_PATH = path.join(__dirname, 'quiz_log_db.json');
+if (!fs.existsSync(QUIZ_LOG_PATH)) fs.writeFileSync(QUIZ_LOG_PATH, JSON.stringify({ logs: [] }, null, 2));
+const getQuizLog = () => JSON.parse(fs.readFileSync(QUIZ_LOG_PATH, 'utf-8'));
+const appendQuizLog = (entry: any) => {
+  const data = getQuizLog();
+  data.logs.push(entry);
+  fs.writeFileSync(QUIZ_LOG_PATH, JSON.stringify(data, null, 2));
+};
+
 app.get('/quiz/state', (req, res) => res.json(quizState));
+app.get('/quiz/logs', (req, res) => res.json(getQuizLog()));
 
 // 문제 편집 중 신호 — 오버레이에 "문제 입력 중" 표시
 app.post('/quiz/editing', (req, res) => {
@@ -588,6 +598,28 @@ app.post('/quiz/stop', (req, res) => {
   quizState.isActive = false;
   quizState.endedAt = new Date().toISOString();
   quizState.previousWinnerCount = previousWinners.length;
+
+  // 퀴즈 로그 기록
+  const correctAnswerers = quizState.mode === 'ox'
+    ? quizState.answers.filter(a => a.answer === quizState.correctAnswer).map(a => a.sender)
+    : quizState.answers.map(a => a.sender);
+  const wrongAnswerers = quizState.mode === 'ox'
+    ? quizState.answers.filter(a => a.answer !== quizState.correctAnswer).map(a => a.sender)
+    : [];
+
+  appendQuizLog({
+    no: getQuizLog().logs.length + 1,
+    mode: quizState.mode,
+    question: quizState.question,
+    correctAnswer: quizState.correctAnswer,
+    choice1: quizState.choice1,
+    choice2: quizState.choice2,
+    correctAnswerers,
+    wrongAnswerers,
+    totalAnswers: quizState.answers.length,
+    startedAt: quizState.startedAt,
+    endedAt: quizState.endedAt,
+  });
 
   io.emit('quizUpdate', quizState);
   console.log(`🏁 [Quiz Stop] correctAnswer=${quizState.correctAnswer}, winners=${previousWinners.length}`);

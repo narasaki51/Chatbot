@@ -1,0 +1,30 @@
+{
+  "logs": [
+    {
+      "no": 1,
+      "mode": "ox",
+      "question": "찌모는 이쁘다",
+      "correctAnswer": "O",
+      "choice1": "1번",
+      "choice2": "2번",
+      "correctAnswerers": [],
+      "wrongAnswerers": [],
+      "totalAnswers": 0,
+      "startedAt": "2026-04-18T17:55:14.250Z",
+      "endedAt": "2026-04-18T17:55:16.391Z"
+    },
+    {
+      "no": 2,
+      "mode": "choice",
+      "question": "찌모는 이쁘다",
+      "correctAnswer": "당연!",
+      "choice1": "1번",
+      "choice2": "2번",
+      "correctAnswerers": [],
+      "wrongAnswerers": [],
+      "totalAnswers": 0,
+      "startedAt": "2026-04-18T17:55:23.783Z",
+      "endedAt": "2026-04-18T17:55:24.202Z"
+    }
+  ]
+}
