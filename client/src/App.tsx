@@ -328,7 +328,7 @@ const AppMain: React.FC = () => {
               backgroundPosition: 'left -38.5% center'
             }} />
             {MEMBER_IMAGES[user.name] && (
-              <img src={`/${MEMBER_IMAGES[user.name]}`} alt={user.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', display: 'block' }} />
+              <img src={`/${user.name === '갱쥰' ? '3-1.png' : MEMBER_IMAGES[user.name]}`} alt={user.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', display: 'block' }} />
             )}
           </div>
 
@@ -351,7 +351,7 @@ const AppMain: React.FC = () => {
               {['1.png', '2.png', '3.png', '4.png', '5.png', '6.png'].map((name, idx) => (
                 <img
                   key={name}
-                  src={`/${name}`}
+                  src={`/${name === '3.png' && Math.random() < 0.5 ? '3-1.png' : name}`}
                   alt={`member-${idx}`}
                   style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', minHeight: 0 }}
                 />

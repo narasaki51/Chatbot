@@ -3,28 +3,47 @@
     {
       "no": 1,
       "mode": "ox",
-      "question": "찌모는 이쁘다",
+      "question": "갱쥰이 오우거",
       "correctAnswer": "O",
       "choice1": "1번",
       "choice2": "2번",
-      "correctAnswerers": [],
-      "wrongAnswerers": [],
-      "totalAnswers": 0,
-      "startedAt": "2026-04-18T17:55:14.250Z",
-      "endedAt": "2026-04-18T17:55:16.391Z"
+      "correctAnswerers": [
+        "가빠시치",
+        "치킨먹어야지",
+        "기욤힛",
+        "트최먹",
+        "빵영",
+        "하이볼에흠뻑취한공룡",
+        "최그나"
+      ],
+      "wrongAnswerers": [
+        "뚜치따치",
+        "마림바",
+        "배고픈로봇7827",
+        "피파뽀"
+      ],
+      "totalAnswers": 11,
+      "startedAt": "2026-04-19T04:09:24.072Z",
+      "endedAt": "2026-04-19T04:10:51.055Z"
     },
     {
       "no": 2,
       "mode": "choice",
-      "question": "찌모는 이쁘다",
-      "correctAnswer": "당연!",
+      "question": "미랑이는 이쁜가?",
+      "correctAnswer": "이쁘다",
       "choice1": "1번",
       "choice2": "2번",
-      "correctAnswerers": [],
+      "correctAnswerers": [
+        "배돈의그분",
+        "아 이 고 래",
+        "하 정 우",
+        "개맛",
+        "인간젤린"
+      ],
       "wrongAnswerers": [],
-      "totalAnswers": 0,
-      "startedAt": "2026-04-18T17:55:23.783Z",
-      "endedAt": "2026-04-18T17:55:24.202Z"
+      "totalAnswers": 5,
+      "startedAt": "2026-04-19T05:57:14.430Z",
+      "endedAt": "2026-04-19T05:58:06.527Z"
     }
   ]
 }

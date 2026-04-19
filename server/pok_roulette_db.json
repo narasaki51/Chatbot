@@ -9,6 +9,10 @@
       "weight": 1
     },
     {
+      "label": "슬레",
+      "weight": 1
+    },
+    {
       "label": "건슬",
       "weight": 1
     },
@@ -21,20 +25,5 @@
       "weight": 1
     }
   ],
-  "personPools": {
-    "건슬": [
-      {
-        "label": "4막",
-        "weight": 1
-      },
-      {
-        "label": "종막",
-        "weight": 1
-      },
-      {
-        "label": "세르카",
-        "weight": 1
-      }
-    ]
-  }
+  "personPools": {}
 }
