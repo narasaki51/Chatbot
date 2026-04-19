@@ -759,7 +759,10 @@ const GroupMissionBoard: React.FC<{ missions: any[], onUpdate: (id: string, s: s
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ member: cleanName, channelId })
     })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) alert(`❌ [${cleanName}] 연결 실패: ${data.error || res.status}`);
+      })
       .catch(err => alert(`❌ 요청 에러: ${err.message}`));
   };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,32 +19,128 @@ interface QuizState {
   startedAt: string | null;
   endedAt: string | null;
   isConsecutiveMode: boolean;
+  winner: { sender: string; answer: string; timestamp: number; channel: string } | null;
 }
 
 const QuizOverlay: React.FC = () => {
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
+  // 룰렛 상태
+  const [rouletteEntry, setRouletteEntry] = useState<{ channel: string; sender: string } | null>(null);
+  const [rouletteFlash, setRouletteFlash] = useState(0);
+  const [rouletteDone, setRouletteDone] = useState(false);
+  const prevEndedAt = useRef<string | null>(null);
+
+  const fetchState = () => {
     fetch(`${SOCKET_URL}/quiz/state`)
       .then(r => r.json())
-      .then(data => setQuiz(data));
+      .then((data: QuizState) => {
+        setQuiz(data);
+        if (data.endedAt && data.winner) {
+          setRouletteEntry({ channel: data.winner.channel, sender: data.winner.sender });
+          setRouletteDone(true);
+          prevEndedAt.current = data.endedAt;
+        }
+      });
+  };
+
+  useEffect(() => {
+    fetchState();
 
     const onUpdate = (state: QuizState) => {
       setQuiz(state);
-      // 퀴즈가 시작되거나 종료되면 editing 상태 해제
       if (state.isActive || state.endedAt) setIsEditing(false);
     };
     const onEditing = () => setIsEditing(true);
+    // 재연결 시 최신 상태 재조회 (놓친 quizUpdate 복구)
+    const onReconnect = () => fetchState();
+
     socket.on('quizUpdate', onUpdate);
     socket.on('quizEditing', onEditing);
+    socket.on('connect', onReconnect);
     return () => {
       socket.off('quizUpdate', onUpdate);
       socket.off('quizEditing', onEditing);
+      socket.off('connect', onReconnect);
     };
   }, []);
 
-  // 상태 판단
+  // 퀴즈 종료 감지 → 룰렛 시작
+  useEffect(() => {
+    if (!quiz || !quiz.endedAt || !quiz.correctAnswer) return;
+    if (quiz.endedAt === prevEndedAt.current) return; // 이미 처리한 종료
+
+    prevEndedAt.current = quiz.endedAt;
+    setRouletteDone(false);
+    setRouletteEntry(null);
+
+    const pool = quiz.mode === 'ox'
+      ? quiz.answers.filter(a => a.answer === quiz.correctAnswer)
+      : quiz.answers;
+
+    if (!quiz.winner || pool.length === 0) {
+      setRouletteDone(true);
+      return;
+    }
+
+    if (pool.length === 1) {
+      setRouletteEntry({ channel: quiz.winner.channel, sender: quiz.winner.sender });
+      setTimeout(() => setRouletteDone(true), 800);
+      return;
+    }
+
+    const winner = quiz.winner;
+    // 스핀 중엔 당첨자 제외 풀에서 뽑기
+    const spinPool = pool.filter(a => a.sender !== winner.sender);
+    const pickSpin = () => {
+      const src = spinPool.length > 0 ? spinPool : pool;
+      return src[Math.floor(Math.random() * src.length)];
+    };
+
+    // 구간별 스텝 설계: 빠름(20) → 감속(15) → 긴장 슬로우(8) → 확정(1)
+    const FAST = 20, SLOW = 15, CRAWL = 8, TOTAL = FAST + SLOW + CRAWL + 1;
+    let step = 0;
+
+    const runStep = () => {
+      step++;
+      const isFinal = step === TOTAL;
+      const entry = isFinal ? winner : pickSpin();
+      setRouletteEntry({ channel: entry.channel, sender: entry.sender });
+      setRouletteFlash(f => f + 1);
+
+      if (!isFinal) {
+        let delay: number;
+        if (step <= FAST) {
+          // 빠른 구간: 50→120ms
+          delay = 50 + 70 * (step / FAST);
+        } else if (step <= FAST + SLOW) {
+          // 감속 구간: 120→400ms
+          const t = (step - FAST) / SLOW;
+          delay = 120 + 280 * (t * t);
+        } else {
+          // 긴장 구간: 400→900ms, 한 칸씩 느리게
+          const t = (step - FAST - SLOW) / CRAWL;
+          delay = 400 + 500 * t;
+        }
+        setTimeout(runStep, delay);
+      } else {
+        setTimeout(() => setRouletteDone(true), 700);
+      }
+    };
+
+    setTimeout(runStep, 300);
+  }, [quiz?.endedAt]);
+
+  // 퀴즈 리셋 시 룰렛 초기화
+  useEffect(() => {
+    if (quiz?.isActive) {
+      setRouletteDone(false);
+      setRouletteEntry(null);
+      prevEndedAt.current = null;
+    }
+  }, [quiz?.isActive]);
+
   const isRevealed = quiz && !quiz.isActive && quiz.endedAt && quiz.correctAnswer;
   const isWaiting = isEditing || !quiz || (!quiz.isActive && !quiz.endedAt);
   const isLive = !isEditing && quiz?.isActive;
@@ -55,7 +151,16 @@ const QuizOverlay: React.FC = () => {
       : quiz.answers.filter(a => a.answer === quiz.correctAnswer).length)
     : 0;
 
+  const winnerData = quiz?.winner ?? null;
+
   return (
+    <>
+    <style>{`
+      @keyframes rouletteFlip {
+        from { opacity: 0; transform: translateY(-10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    `}</style>
     <div style={{
       width: '100vw',
       height: '100vh',
@@ -193,7 +298,7 @@ const QuizOverlay: React.FC = () => {
               </div>
             )}
 
-            {/* 선착순 응답 수 (진행 중에는 명단 대신 숫자만) */}
+            {/* 선착순 응답 수 */}
             {quiz.mode === 'choice' && (
               <div style={{ color: '#a78bfa', fontWeight: 700, fontSize: '1.2rem', marginTop: '16px' }}>
                 🏆 현재 {quiz.answers.length}명 응답 중
@@ -226,7 +331,7 @@ const QuizOverlay: React.FC = () => {
               ✅ 정답 공개
             </div>
 
-            {/* 퀴즈 문제 (작게) */}
+            {/* 퀴즈 문제 */}
             {quiz.question && (
               <div style={{ color: '#94a3b8', fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', padding: '12px 20px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px' }}>
                 {quiz.question}
@@ -262,57 +367,102 @@ const QuizOverlay: React.FC = () => {
               color: '#4ade80',
               fontWeight: 900,
               fontSize: '1.2rem',
-              marginBottom: '24px'
+              marginBottom: '28px'
             }}>
               정답자 {correctCount}명
             </div>
 
-            {/* 종료 후 정답자 명단 (최대 30명) */}
-            {quiz.answers.length > 0 && (
-              <div style={{ width: '100%', marginTop: '10px' }}>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(3, 1fr)', 
-                  gap: '10px', 
-                  maxHeight: '400px', 
-                  overflow: 'hidden',
-                  padding: '0 10px'
+            {/* 룰렛 / 당첨자 영역 */}
+            {(rouletteEntry || winnerData) && (
+              <div style={{
+                marginTop: '4px',
+                background: rouletteDone
+                  ? 'rgba(74, 222, 128, 0.15)'
+                  : 'rgba(30, 30, 50, 0.6)',
+                border: `2px solid ${rouletteDone ? 'rgba(74, 222, 128, 0.7)' : 'rgba(148, 163, 184, 0.3)'}`,
+                borderRadius: '18px',
+                padding: '22px 48px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px',
+                transition: 'background 0.4s, border-color 0.4s',
+                boxShadow: rouletteDone ? '0 0 30px rgba(74,222,128,0.2)' : 'none',
+              }}>
+                <span style={{
+                  color: rouletteDone ? 'rgba(74, 222, 128, 0.8)' : '#64748b',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  transition: 'color 0.4s',
                 }}>
-                  {(quiz.mode === 'choice' ? quiz.answers : quiz.answers.filter(a => a.answer === quiz.correctAnswer)).slice(0, 30).map((a, i) => {
-                    const time = new Date(a.timestamp);
-                    const timeStr = `${String(time.getMinutes()).padStart(2, '0')}:${String(time.getSeconds()).padStart(2, '0')}.${String(Math.floor(time.getMilliseconds() / 10)).padStart(2, '0')}`;
-                    return (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.3 + i * 0.03 }}
-                        key={i} 
-                        style={{ 
-                          background: 'rgba(74, 222, 128, 0.1)', 
-                          border: '1px solid rgba(74, 222, 128, 0.3)', 
-                          borderRadius: '10px', 
-                          padding: '8px 12px', 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center',
-                          fontSize: '0.9rem'
-                        }}
-                      >
-                        <span style={{ color: '#4ade80', fontWeight: 900, marginRight: '8px' }}>#{i + 1}</span>
-                        <span style={{ color: '#fff', fontWeight: 700, flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <span style={{ color: '#ffffff88', fontSize: '0.8rem' }}>{a.channel}:</span>{a.sender}
-                        </span>
-                        <span style={{ color: 'rgba(74, 222, 128, 0.6)', fontSize: '0.7rem', fontWeight: 600 }}>{timeStr}</span>
-                      </motion.div>
-                    );
-                  })}
+                  {rouletteDone ? '🎉 당첨자' : '🎰 추첨 중...'}
+                </span>
+
+                {/* 이름 표시 */}
+                <div style={{ position: 'relative', height: '3.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {rouletteDone ? (
+                    <motion.span
+                      key="winner-final"
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: [1.3, 0.95, 1.05, 1], opacity: 1 }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                      style={{
+                        color: '#ffffff',
+                        fontWeight: 900,
+                        fontSize: '2.4rem',
+                        textShadow: '0 0 20px rgba(74,222,128,0.5)',
+                        position: 'absolute',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span style={{ color: '#ffffff55', fontSize: '1.1rem' }}>
+                        {winnerData?.channel}:
+                      </span>
+                      {winnerData?.sender}
+                    </motion.span>
+                  ) : (
+                    /* AnimatePresence 없이 key만 바꿔서 즉시 교체 — exit 대기 없음 */
+                    <span
+                      key={rouletteFlash}
+                      style={{
+                        color: '#cbd5e1',
+                        fontWeight: 900,
+                        fontSize: '2.4rem',
+                        position: 'absolute',
+                        animation: 'rouletteFlip 0.07s ease-out',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span style={{ color: '#ffffff44', fontSize: '1.1rem' }}>
+                        {rouletteEntry?.channel}:
+                      </span>
+                      {rouletteEntry?.sender}
+                    </span>
+                  )}
                 </div>
+
+                {/* 당첨 후 응답 시간 */}
+                {rouletteDone && winnerData && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    style={{ color: 'rgba(74, 222, 128, 0.5)', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    {(() => {
+                      const t = new Date(winnerData.timestamp);
+                      return `${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}.${String(Math.floor(t.getMilliseconds() / 10)).padStart(2, '0')}`;
+                    })()}
+                  </motion.span>
+                )}
               </div>
             )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };
 

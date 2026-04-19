@@ -114,6 +114,7 @@ interface QuizState {
   endedAt: string | null;
   isConsecutiveMode: boolean;
   previousWinnerCount: number;
+  winner: { sender: string; answer: string; timestamp: number; channel: string } | null;
 }
 
 let quizState: QuizState = {
@@ -128,6 +129,7 @@ let quizState: QuizState = {
   endedAt: null,
   isConsecutiveMode: false,
   previousWinnerCount: 0,
+  winner: null,
 };
 
 let previousWinners: string[] = [];
@@ -575,6 +577,7 @@ app.post('/quiz/start', (req, res) => {
     endedAt: null,
     isConsecutiveMode: !!isConsecutiveMode,
     previousWinnerCount: previousWinners.length,
+    winner: null,
   };
   io.emit('quizUpdate', quizState);
   console.log(`🎯 [Quiz Start] mode=${mode}, answer=${correctAnswer}, consecutive=${isConsecutiveMode}`);
@@ -598,6 +601,11 @@ app.post('/quiz/stop', (req, res) => {
   quizState.isActive = false;
   quizState.endedAt = new Date().toISOString();
   quizState.previousWinnerCount = previousWinners.length;
+
+  const pool = quizState.mode === 'ox'
+    ? quizState.answers.filter(a => a.answer === quizState.correctAnswer)
+    : quizState.answers;
+  quizState.winner = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] ?? null : null;
 
   // 퀴즈 로그 기록
   const correctAnswerers = quizState.mode === 'ox'
@@ -631,7 +639,7 @@ app.post('/quiz/reset', (req, res) => {
   quizState = {
     isActive: false, mode: 'ox', question: '', correctAnswer: '',
     choice1: '1번', choice2: '2번', answers: [], startedAt: null, endedAt: null,
-    isConsecutiveMode: false, previousWinnerCount: 0,
+    isConsecutiveMode: false, previousWinnerCount: 0, winner: null,
   };
   io.emit('quizUpdate', quizState);
   res.json({ success: true });
