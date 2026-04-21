@@ -72,7 +72,7 @@ const AppMain: React.FC = () => {
     } catch { }
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'pinball' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament'>('dashboard');
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(false);
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
@@ -117,7 +117,7 @@ const AppMain: React.FC = () => {
     };
   }, [SOCKET_URL]);
 
-  // 접속 로그 기록 (로그인 상태로 새로고침/접속 시)
+  // 접속 로그 기록 및 이미지 프리로딩 (로딩 속도 개선)
   useEffect(() => {
     if (user) {
       fetch(`${SOCKET_URL}/log-access`, {
@@ -126,6 +126,17 @@ const AppMain: React.FC = () => {
         body: JSON.stringify({ name: user.name })
       }).catch(err => console.error("Log access error:", err));
     }
+
+    // 주요 이미지 프리로딩
+    const imagesToPreload = [
+      '/login-bg.png',
+      '/rating.png',
+      '/1.png', '/2.png', '/3.png', '/4.png', '/5.png', '/6.png', '/3-1.png'
+    ];
+    imagesToPreload.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
   }, []); // 마운트 시 최초 1회만 실행
 
 
@@ -261,7 +272,7 @@ const AppMain: React.FC = () => {
               <button onClick={() => setView('quiz')} style={{ background: view === 'quiz' ? '#222' : 'transparent', color: view === 'quiz' ? '#f59e0b' : '#666', border: '1px solid', borderColor: view === 'quiz' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 퀴즈쇼</button>
               <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
               <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
-              <button onClick={() => setView('pinball')} style={{ background: view === 'pinball' ? '#222' : 'transparent', color: view === 'pinball' ? '#ff6b6b' : '#666', border: '1px solid', borderColor: view === 'pinball' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🎯 핀볼</button>
+
             </div>
           )}
 
@@ -433,8 +444,7 @@ const AppMain: React.FC = () => {
             <SentimentTracker key="senti-comp-last" />
           ) : view === 'chatbot' ? (
             <HamsterChatBot key="chatbot-comp-last" />
-          ) : view === 'pinball' ? (
-            <PinballGame key="pinball-comp-last" />
+
           ) : view === 'rating' ? (
             <RatingBoard key="rating-comp-last" user={user!} />
           ) : view === 'pok_roulette' ? (
@@ -2406,7 +2416,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '10px 0' }}>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '10px 0', transform: 'translateX(-40px)' }}>
       {/* 리그 탭 */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
         {(['4000', '5000', '6000', 'extra'] as RatingLeague[]).map(lg => {
@@ -2437,7 +2447,8 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
               : b.intruderName;
             return (
               <div key={b.id} className="highlight-card" style={{
-                background: `linear-gradient(135deg, ${bCfg.color}18 0%, #0d0d0d 100%)`,
+                background: '#111',
+                backgroundImage: `linear-gradient(135deg, ${bCfg.color}33 0%, #111 100%)`,
                 border: `1px solid ${bCfg.color}88`,
                 borderRadius: '10px',
                 padding: '10px 14px',
@@ -2461,8 +2472,8 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                     return (
                       <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                         {i > 0 && <span style={{ color: '#555', fontWeight: 900, margin: '0 2px', fontSize: '0.75rem' }}>vs</span>}
-                        <span style={{ fontWeight: 900, fontSize: '0.88rem', color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff' }}>{p.name}</span>
-                        <span style={{ fontSize: '0.72rem', color: '#555' }}>({p.member})</span>
+                        <span style={{ fontWeight: 900, fontSize: '0.92rem', color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name}</span>
+                        <span style={{ fontSize: '0.78rem', color: '#555', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.member}>({p.member})</span>
                       </span>
                     );
                   })}
@@ -2781,8 +2792,8 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
                       return (
                         <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           {i > 0 && <span style={{ color: '#444', fontWeight: 900, margin: '0 2px' }}>vs</span>}
-                          <span style={{ fontWeight: 900, color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff' }}>{p.name}</span>
-                          <span style={{ fontSize: '0.78rem', color: '#555' }}>({p.member})</span>
+                          <span style={{ fontWeight: 900, fontSize: '0.95rem', color: isWinner ? '#4ade80' : isLoser ? '#f87171' : '#fff', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name}</span>
+                          <span style={{ fontSize: '0.78rem', color: '#555', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.member}>({p.member})</span>
                           {i === 2 && !isCompleted && <span style={{ fontSize: '0.7rem', color: '#f97316', background: '#2a1500', border: '1px solid #f97316', borderRadius: '8px', padding: '1px 6px', marginLeft: '2px' }}>난입</span>}
                         </span>
                       );
@@ -2975,647 +2986,7 @@ const RatingBoard: React.FC<{ user: UserAuth }> = ({ user }) => {
   );
 };
 
-// ─────────────────────────────────────────────
-// 🎯 핀볼 게임
-// ─────────────────────────────────────────────
-const PinballGame: React.FC = () => {
-  const CW = 560, CH = 2800;
-  const GRAVITY = 0.18;
-  const BALL_R = 10;
-  const BALL_COLORS = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff922b', '#cc5de8', '#f06595', '#00ffa3'];
 
-  type Ball = { x: number; y: number; vx: number; vy: number; r: number; color: string; active: boolean; trail: { x: number; y: number }[]; name: string; slowFrames: number };
-  type PendingBall = { name: string; color: string };
-  type PegObs = { kind: 'peg'; x: number; y: number; r: number };
-  type BumperObs = { kind: 'bumper'; x: number; y: number; r: number; label: string; pts: number; hitTime: number };
-  type RampObs = { kind: 'ramp'; x1: number; y1: number; x2: number; y2: number };
-  type SpinnerObs = { kind: 'spinner'; cx: number; cy: number; len: number; angle: number; speed: number };
-  type Obstacle = PegObs | BumperObs | RampObs | SpinnerObs;
-  type GoalSlot = { x: number; w: number; label: string; color: string; pts: number; count: number };
-
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const ballsRef = useRef<Ball[]>([]);
-  const obsRef = useRef<Obstacle[]>([]);
-  const pendingRef = useRef<PendingBall[]>([]);
-  const [pending, setPending] = useState<PendingBall[]>([]);
-  const [newBallName, setNewBallName] = useState('');
-  const [totalScore, setTotalScore] = useState(0);
-  const [ballCount, setBallCount] = useState(0);
-  const totalScoreRef = useRef(0);
-  const [lastArrival, setLastArrival] = useState<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
-  const lastArrivedRef = useRef<{ name: string; color: string; slotLabel: string; isJackpot: boolean } | null>(null);
-  const lastArrivalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 6 슬롯 — 가운데 JACKPOT
-  const SLOT_W = Math.floor(CW / 6);
-  const INIT_GOALS: GoalSlot[] = [
-    { x: 0, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
-    { x: SLOT_W, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
-    { x: SLOT_W * 2, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
-    { x: SLOT_W * 3, w: SLOT_W, label: '💎JACKPOT', color: '#ffd700', pts: 1, count: 0 },
-    { x: SLOT_W * 4, w: SLOT_W, label: '꽝', color: '#555', pts: 0, count: 0 },
-    { x: SLOT_W * 5, w: CW - SLOT_W * 5, label: '꽝', color: '#555', pts: 0, count: 0 },
-  ];
-  const goalsRef = useRef<GoalSlot[]>(INIT_GOALS.map(g => ({ ...g })));
-  const [goals, setGoals] = useState<GoalSlot[]>(INIT_GOALS);
-
-  // Build obstacles once
-  useEffect(() => {
-    const obs: Obstacle[] = [];
-    const wideXs = [45, 125, 205, 285, 365, 445, 515];  // 7 pegs
-    const narrowXs = [85, 165, 245, 325, 405, 480];       // 6 pegs
-
-    // 구역별 장애물 구성
-    // ── Zone 0: 진입 램프 (y 80~180) ──
-    obs.push({ kind: 'ramp', x1: 0, y1: 80, x2: 100, y2: 170 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 80, x2: CW - 100, y2: 170 });
-
-    // ── Zone 1: 첫 번째 핀 구역 (y 190~430) ──
-    const z1rows = [190, 235, 280, 325, 370, 415];
-    z1rows.forEach((y, i) => {
-      const xs = i % 2 === 0 ? wideXs : narrowXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-    obs.push({ kind: 'spinner', cx: 140, cy: 253, len: 38, angle: 0, speed: 0.04 });
-    obs.push({ kind: 'spinner', cx: 420, cy: 253, len: 38, angle: Math.PI / 2, speed: -0.04 });
-
-    // ── Zone 2: 범퍼 구역 1 (y 460~640) ──
-    obs.push({ kind: 'bumper', x: 140, y: 530, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 490, r: 32, label: '💎', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 420, y: 530, r: 28, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'ramp', x1: 0, y1: 460, x2: 80, y2: 500 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 460, x2: CW - 80, y2: 500 });
-    [590, 635].forEach((y, i) => {
-      const xs = i % 2 === 0 ? narrowXs : wideXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-
-    // ── Zone 3: 두 번째 핀 구역 (y 680~950) ──
-    const z3rows = [680, 725, 770, 815, 860, 905, 950];
-    z3rows.forEach((y, i) => {
-      const xs = i % 2 === 0 ? wideXs : narrowXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-
-    // ── Zone 4: 스피너 구역 (y 980~1150) ──
-    obs.push({ kind: 'spinner', cx: 100, cy: 1040, len: 45, angle: 0, speed: 0.05 });
-    obs.push({ kind: 'spinner', cx: 280, cy: 1010, len: 45, angle: Math.PI / 3, speed: -0.05 });
-    obs.push({ kind: 'spinner', cx: 460, cy: 1040, len: 45, angle: Math.PI * 0.7, speed: 0.05 });
-    [1090, 1135].forEach((y, i) => {
-      const xs = i % 2 === 0 ? narrowXs : wideXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-
-    // ── Zone 5: 세 번째 핀 구역 (y 1175~1490) ──
-    const z5rows = [1175, 1220, 1265, 1310, 1355, 1400, 1445, 1490];
-    z5rows.forEach((y, i) => {
-      const xs = i % 2 === 0 ? wideXs : narrowXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-    // Zone 5 중간 스피너 (속도 다양)
-    obs.push({ kind: 'spinner', cx: 80, cy: 1290, len: 36, angle: 0, speed: 0.09 });
-    obs.push({ kind: 'spinner', cx: 280, cy: 1330, len: 50, angle: Math.PI * 0.5, speed: -0.03 });
-    obs.push({ kind: 'spinner', cx: 480, cy: 1290, len: 36, angle: Math.PI * 0.8, speed: 0.12 });
-
-    // ── Zone 6: 범퍼 구역 2 (y 1530~1720) ──
-    obs.push({ kind: 'bumper', x: 80, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 185, y: 1555, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 1590, r: 30, label: '💎', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 375, y: 1555, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 480, y: 1590, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'ramp', x1: 0, y1: 1530, x2: 55, y2: 1570 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 1530, x2: CW - 55, y2: 1570 });
-    [1660, 1710].forEach((y, i) => {
-      const xs = i % 2 === 0 ? narrowXs : wideXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-
-    // ── Zone 7: 네 번째 핀 구역 (y 1755~2020) ──
-    const z7rows = [1755, 1800, 1845, 1890, 1935, 1980, 2025];
-    z7rows.forEach((y, i) => {
-      const xs = i % 2 === 0 ? wideXs : narrowXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-    obs.push({ kind: 'spinner', cx: 180, cy: 1867, len: 40, angle: 0, speed: -0.04 });
-    obs.push({ kind: 'spinner', cx: 380, cy: 1867, len: 40, angle: Math.PI / 2, speed: 0.04 });
-    // Zone 7 추가 스피너 (빠른 것 / 느린 것 혼합)
-    obs.push({ kind: 'spinner', cx: 280, cy: 1960, len: 55, angle: Math.PI * 0.3, speed: -0.10 });
-    obs.push({ kind: 'spinner', cx: 60, cy: 2000, len: 32, angle: Math.PI * 0.7, speed: 0.15 });
-    obs.push({ kind: 'spinner', cx: 500, cy: 2000, len: 32, angle: Math.PI * 1.2, speed: -0.07 });
-
-    // ── Zone 8: 다섯 번째 핀 구역 (y 2065~2330) ──
-    const z8rows = [2065, 2110, 2155, 2200, 2245, 2290, 2335];
-    z8rows.forEach((y, i) => {
-      const xs = i % 2 === 0 ? wideXs : narrowXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-    // Zone 8 중간 스피너 (속도 다양)
-    obs.push({ kind: 'spinner', cx: 140, cy: 2170, len: 42, angle: Math.PI * 0.2, speed: 0.08 });
-    obs.push({ kind: 'spinner', cx: 420, cy: 2170, len: 42, angle: Math.PI * 1.1, speed: -0.13 });
-    obs.push({ kind: 'spinner', cx: 280, cy: 2260, len: 48, angle: Math.PI * 0.6, speed: 0.05 });
-
-    // ── Zone 9: 범퍼 구역 3 + 마지막 핀 (y 2360~2600) ──
-    obs.push({ kind: 'bumper', x: 100, y: 2390, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 210, y: 2360, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 280, y: 2400, r: 30, label: '💎', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 350, y: 2360, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    obs.push({ kind: 'bumper', x: 460, y: 2390, r: 26, label: 'BOOM', pts: 0, hitTime: 0 });
-    const z9rows = [2450, 2495, 2540, 2585, 2630];
-    z9rows.forEach((y, i) => {
-      const xs = i % 2 === 0 ? wideXs : narrowXs;
-      xs.forEach(x => obs.push({ kind: 'peg', x, y, r: 7 }));
-    });
-
-    // ── 골 근처 대형 스피너 2개 (좌/우) ──
-    obs.push({ kind: 'spinner', cx: 185, cy: 2700, len: 110, angle: 0, speed: -0.06 });
-    obs.push({ kind: 'spinner', cx: 430, cy: 2700, len: 110, angle: Math.PI / 2, speed: 0.06 });
-
-    // ── 최종 깔때기 램프 (y 2670~2750) ──
-    obs.push({ kind: 'ramp', x1: 0, y1: 2660, x2: SLOT_W * 3, y2: 2740 });
-    obs.push({ kind: 'ramp', x1: CW, y1: 2660, x2: SLOT_W * 3 + SLOT_W, y2: 2740 });
-
-    obsRef.current = obs;
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
-    let animId: number;
-
-    // ─── Collision helpers ───
-    const collideBallCircle = (ball: Ball, cx: number, cy: number, cr: number, restitution: number, boost = 0): boolean => {
-      const dx = ball.x - cx, dy = ball.y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const minD = ball.r + cr;
-      if (dist < minD && dist > 0.001) {
-        const nx = dx / dist, ny = dy / dist;
-        ball.x += nx * (minD - dist);
-        ball.y += ny * (minD - dist);
-        const dot = ball.vx * nx + ball.vy * ny;
-        ball.vx = (ball.vx - 2 * dot * nx) * restitution + nx * boost;
-        ball.vy = (ball.vy - 2 * dot * ny) * restitution + ny * boost;
-        return true;
-      }
-      return false;
-    };
-
-    const collideBallSegment = (ball: Ball, x1: number, y1: number, x2: number, y2: number) => {
-      const dx = x2 - x1, dy = y2 - y1;
-      const len2 = dx * dx + dy * dy;
-      if (len2 === 0) return;
-      const t = Math.max(0, Math.min(1, ((ball.x - x1) * dx + (ball.y - y1) * dy) / len2));
-      const cx = x1 + t * dx, cy = y1 + t * dy;
-      const ex = ball.x - cx, ey = ball.y - cy;
-      const dist = Math.sqrt(ex * ex + ey * ey);
-      if (dist < ball.r && dist > 0.001) {
-        const nx = ex / dist, ny = ey / dist;
-        ball.x += nx * (ball.r - dist);
-        ball.y += ny * (ball.r - dist);
-        const dot = ball.vx * nx + ball.vy * ny;
-        ball.vx = (ball.vx - 2 * dot * nx) * 0.55;
-        ball.vy = (ball.vy - 2 * dot * ny) * 0.55;
-      }
-    };
-
-    // ─── Update physics ───
-    const MAX_SPEED = 15;
-    const SUBSTEPS = 2;
-    const update = () => {
-      const now = Date.now();
-      // Rotate spinners (1회만)
-      for (const obs of obsRef.current) {
-        if (obs.kind === 'spinner') obs.angle += obs.speed;
-      }
-
-      for (const ball of ballsRef.current) {
-        if (!ball.active) continue;
-
-        // Trail (서브스텝 전 한 번)
-        ball.trail.push({ x: ball.x, y: ball.y });
-        if (ball.trail.length > 10) ball.trail.shift();
-
-        // 서브스텝: 속도를 잘게 나눠 충돌 검사 → 터널링 방지
-        for (let step = 0; step < SUBSTEPS; step++) {
-          ball.vy += GRAVITY / SUBSTEPS;
-          ball.vx *= Math.pow(0.999, 1 / SUBSTEPS);
-          ball.x += ball.vx / SUBSTEPS;
-          ball.y += ball.vy / SUBSTEPS;
-
-          // 최대 속도 제한
-          const spd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
-          if (spd > MAX_SPEED) { ball.vx = ball.vx / spd * MAX_SPEED; ball.vy = ball.vy / spd * MAX_SPEED; }
-
-          // Wall bounce
-          if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = Math.abs(ball.vx) * 0.65; }
-          if (ball.x + ball.r > CW) { ball.x = CW - ball.r; ball.vx = -Math.abs(ball.vx) * 0.65; }
-
-          // Obstacles
-          for (const obs of obsRef.current) {
-            if (obs.kind === 'peg') {
-              collideBallCircle(ball, obs.x, obs.y, obs.r, 0.62);
-            } else if (obs.kind === 'bumper') {
-              const hit = collideBallCircle(ball, obs.x, obs.y, obs.r, 0.92, 6);
-              if (hit) { obs.hitTime = now; }
-            } else if (obs.kind === 'ramp') {
-              collideBallSegment(ball, obs.x1, obs.y1, obs.x2, obs.y2);
-            } else if (obs.kind === 'spinner') {
-              const cos = Math.cos(obs.angle), sin = Math.sin(obs.angle);
-              collideBallSegment(ball,
-                obs.cx - cos * obs.len, obs.cy - sin * obs.len,
-                obs.cx + cos * obs.len, obs.cy + sin * obs.len
-              );
-            }
-          }
-        } // end substep
-
-        // Slow-frame 정체 감지 → 랜덤 탈출 점프
-        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
-        if (speed < 0.6) {
-          ball.slowFrames = (ball.slowFrames || 0) + 1;
-          if (ball.slowFrames > 90) {
-            ball.vx += (Math.random() - 0.5) * 6;
-            ball.vy -= 3 + Math.random() * 4;
-            ball.slowFrames = 0;
-          }
-        } else {
-          ball.slowFrames = 0;
-        }
-
-        // Goal detection
-        if (ball.y + ball.r > CH - 45 && ball.active) {
-          ball.active = false;
-          const gIdx = goalsRef.current.findIndex(g => ball.x >= g.x && ball.x < g.x + g.w);
-          const slot = gIdx >= 0 ? goalsRef.current[gIdx] : null;
-          if (slot) {
-            const updated = goalsRef.current.map((g, i) => i === gIdx ? { ...g, count: g.count + 1 } : g);
-            goalsRef.current = updated;
-            setGoals([...updated]);
-            if (slot.pts > 0) { totalScoreRef.current += 1; setTotalScore(totalScoreRef.current); }
-            lastArrivedRef.current = { name: ball.name, color: ball.color, slotLabel: slot.label, isJackpot: slot.pts > 0 };
-          }
-        }
-      }
-
-      // 공끼리 충돌 (O(n²))
-      const activeBalls = ballsRef.current.filter(b => b.active);
-      for (let i = 0; i < activeBalls.length; i++) {
-        for (let j = i + 1; j < activeBalls.length; j++) {
-          const a = activeBalls[i], b = activeBalls[j];
-          const dx = b.x - a.x, dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const minD = a.r + b.r;
-          if (dist < minD && dist > 0.001) {
-            const nx = dx / dist, ny = dy / dist;
-            const overlap = (minD - dist) / 2;
-            a.x -= nx * overlap; a.y -= ny * overlap;
-            b.x += nx * overlap; b.y += ny * overlap;
-            const relVx = a.vx - b.vx, relVy = a.vy - b.vy;
-            const dot = relVx * nx + relVy * ny;
-            if (dot > 0) {
-              const impulse = dot * 0.85;
-              a.vx -= impulse * nx; a.vy -= impulse * ny;
-              b.vx += impulse * nx; b.vy += impulse * ny;
-            }
-          }
-        }
-      }
-
-      ballsRef.current = ballsRef.current.filter(b => b.active || b.y < CH + 80);
-
-      // 모든 공 골인 완료 시 마지막 이름 표시
-      if (ballsRef.current.length === 0 && lastArrivedRef.current) {
-        const info = lastArrivedRef.current;
-        lastArrivedRef.current = null;
-        if (lastArrivalTimer.current) clearTimeout(lastArrivalTimer.current);
-        setLastArrival(info);
-        lastArrivalTimer.current = setTimeout(() => setLastArrival(null), 6000);
-      }
-    };
-
-    // ─── Render ───
-    const render = () => {
-      const now = Date.now();
-      ctx.clearRect(0, 0, CW, CH);
-
-      // Background gradient
-      const bg = ctx.createLinearGradient(0, 0, 0, CH);
-      bg.addColorStop(0, '#080818');
-      bg.addColorStop(1, '#0a0a0a');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, CW, CH);
-
-      // Border
-      ctx.strokeStyle = '#1a1a3a';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(1.5, 1.5, CW - 3, CH - 3);
-
-      // ─── Ramps ───
-      for (const obs of obsRef.current) {
-        if (obs.kind !== 'ramp') continue;
-        ctx.save();
-        ctx.shadowColor = '#00ffa3';
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = '#00ffa3';
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(obs.x1, obs.y1);
-        ctx.lineTo(obs.x2, obs.y2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // ─── Spinners ───
-      for (const obs of obsRef.current) {
-        if (obs.kind !== 'spinner') continue;
-        const cos = Math.cos(obs.angle), sin = Math.sin(obs.angle);
-        ctx.save();
-        ctx.shadowColor = '#cc5de8';
-        ctx.shadowBlur = 12;
-        ctx.strokeStyle = '#cc5de8';
-        ctx.lineWidth = 5;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(obs.cx - cos * obs.len, obs.cy - sin * obs.len);
-        ctx.lineTo(obs.cx + cos * obs.len, obs.cy + sin * obs.len);
-        ctx.stroke();
-        // Center pivot
-        ctx.beginPath();
-        ctx.arc(obs.cx, obs.cy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#cc5de8';
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // ─── Pegs ───
-      for (const obs of obsRef.current) {
-        if (obs.kind !== 'peg') continue;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
-        const pg = ctx.createRadialGradient(obs.x - 2, obs.y - 2, 1, obs.x, obs.y, obs.r);
-        pg.addColorStop(0, '#e0e8ff');
-        pg.addColorStop(1, '#8090c0');
-        ctx.fillStyle = pg;
-        ctx.shadowColor = '#6080ff';
-        ctx.shadowBlur = 8;
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // ─── Bumpers ───
-      for (const obs of obsRef.current) {
-        if (obs.kind !== 'bumper') continue;
-        const isHit = now - obs.hitTime < 250;
-        const baseCol = obs.label === '💎' ? '#ffd700' : '#ff6b6b';
-        ctx.save();
-        const grd = ctx.createRadialGradient(obs.x, obs.y, 2, obs.x, obs.y, obs.r);
-        grd.addColorStop(0, isHit ? '#ffffff' : baseCol);
-        grd.addColorStop(0.6, isHit ? baseCol : baseCol + '99');
-        grd.addColorStop(1, baseCol + '22');
-        ctx.beginPath();
-        ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.shadowColor = baseCol;
-        ctx.shadowBlur = isHit ? 40 : 18;
-        ctx.fill();
-        ctx.strokeStyle = isHit ? '#fff' : baseCol;
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-        ctx.fillStyle = isHit ? '#000' : '#fff';
-        ctx.font = `bold ${obs.label === '💎' ? 16 : 10}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowBlur = 0;
-        ctx.fillText(obs.label, obs.x, obs.y);
-        ctx.restore();
-      }
-
-      // ─── Balls (trail + sphere) ───
-      for (const ball of ballsRef.current) {
-        if (!ball.active && ball.y > CH) continue;
-        // Trail
-        for (let i = 0; i < ball.trail.length; i++) {
-          const alpha = (i / ball.trail.length) * 0.35;
-          const trailR = ball.r * ((i + 1) / ball.trail.length) * 0.75;
-          ctx.beginPath();
-          ctx.arc(ball.trail[i].x, ball.trail[i].y, trailR, 0, Math.PI * 2);
-          const hex = Math.floor(alpha * 255).toString(16).padStart(2, '0');
-          ctx.fillStyle = ball.color + hex;
-          ctx.fill();
-        }
-        // Sphere gradient
-        const sg = ctx.createRadialGradient(ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.1, ball.x, ball.y, ball.r);
-        sg.addColorStop(0, '#ffffff');
-        sg.addColorStop(0.35, ball.color);
-        sg.addColorStop(1, ball.color + '66');
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-        ctx.fillStyle = sg;
-        ctx.shadowColor = ball.color;
-        ctx.shadowBlur = 14;
-        ctx.fill();
-        ctx.restore();
-        // 공 이름
-        ctx.save();
-        ctx.shadowBlur = 3; ctx.shadowColor = '#000';
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 8px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(ball.name.slice(0, 6), ball.x, ball.y - ball.r - 1);
-        ctx.restore();
-      }
-
-      // ─── Goal slots ───
-      const gY = CH - 48;
-      // Divider pins
-      for (const g of goalsRef.current) {
-        ctx.fillStyle = '#888';
-        ctx.fillRect(g.x, gY - 14, 3, 62);
-      }
-      ctx.fillStyle = '#888';
-      ctx.fillRect(CW - 3, gY - 14, 3, 62);
-
-      for (const g of goalsRef.current) {
-        ctx.save();
-        ctx.fillStyle = g.color + '44';
-        ctx.fillRect(g.x + 3, gY, g.w - 3, 48);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = g.color;
-        ctx.shadowColor = g.color;
-        ctx.shadowBlur = g.pts >= 100 ? 12 : 0;
-        ctx.fillText(g.label, g.x + g.w / 2, gY + 15);
-        ctx.shadowBlur = 0;
-        if (g.count > 0) {
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.fillText(`×${g.count}`, g.x + g.w / 2, gY + 34);
-        }
-        ctx.restore();
-      }
-
-      // ─── Launch zone marker ───
-      ctx.save();
-      ctx.setLineDash([6, 6]);
-      ctx.strokeStyle = '#ffffff18';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, 30);
-      ctx.lineTo(CW, 30);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    };
-
-    const loop = () => { update(); render(); animId = requestAnimationFrame(loop); };
-    animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  const enqueueBall = (name: string) => {
-    if (!name.trim()) return;
-    const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
-    const next = [...pendingRef.current, { name: name.trim(), color }];
-    pendingRef.current = next;
-    setPending([...next]);
-    setNewBallName('');
-  };
-
-  const removePending = (idx: number) => {
-    const next = pendingRef.current.filter((_, i) => i !== idx);
-    pendingRef.current = next;
-    setPending([...next]);
-  };
-
-  const launchAll = () => {
-    if (pendingRef.current.length === 0) return;
-    const pb = pendingRef.current;
-    const spacing = Math.min(60, (CW - 40) / pb.length);
-    const totalW = spacing * (pb.length - 1);
-    const startX = (CW - totalW) / 2;
-    pb.forEach((p, i) => {
-      const x = startX + i * spacing;
-      ballsRef.current.push({ x, y: 20, vx: (Math.random() - 0.5) * 3, vy: 0, r: BALL_R, color: p.color, active: true, trail: [], name: p.name, slowFrames: 0 });
-    });
-    setBallCount(c => c + pb.length);
-    pendingRef.current = [];
-    setPending([]);
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-  };
-
-  const resetGame = () => {
-    ballsRef.current = [];
-    pendingRef.current = [];
-    setPending([]);
-    lastArrivedRef.current = null;
-    setLastArrival(null);
-    const fresh = INIT_GOALS.map(g => ({ ...g }));
-    goalsRef.current = fresh;
-    setGoals(fresh);
-    totalScoreRef.current = 0;
-    setTotalScore(0);
-    setBallCount(0);
-  };
-
-  const btnStyle = (color: string): React.CSSProperties => ({
-    cursor: 'pointer', width: '100%', padding: '12px', borderRadius: '12px',
-    border: `1px solid ${color}44`, background: color + '22', color,
-    fontWeight: 900, fontSize: '0.9rem',
-  });
-
-  return (
-    <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start', justifyContent: 'center', padding: '10px 0', position: 'relative' }}>
-      {/* 마지막 도착 오버레이 */}
-      {lastArrival && (
-        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 9999, textAlign: 'center', pointerEvents: 'none' }}>
-          <div style={{ background: lastArrival.isJackpot ? 'radial-gradient(circle, #ffd70044, #00000088)' : 'radial-gradient(circle, #33333388, #00000088)', borderRadius: '24px', padding: '36px 56px', border: `2px solid ${lastArrival.isJackpot ? '#ffd700' : '#555'}`, boxShadow: lastArrival.isJackpot ? '0 0 80px #ffd700aa' : '0 0 30px #00000088' }}>
-            {lastArrival.isJackpot && <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎉</div>}
-            <div style={{ color: lastArrival.color, fontSize: '2.4rem', fontWeight: 900, textShadow: `0 0 20px ${lastArrival.color}` }}>{lastArrival.name}</div>
-            <div style={{ color: lastArrival.isJackpot ? '#ffd700' : '#aaa', fontSize: '1.1rem', marginTop: '8px', fontWeight: 700 }}>{lastArrival.slotLabel}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Canvas — 스크롤 가능 */}
-      <div ref={scrollRef} style={{ height: '720px', overflowY: 'scroll', borderRadius: '12px', border: '2px solid #1a1a3a', boxShadow: '0 0 40px rgba(0,100,255,0.15)', scrollbarWidth: 'thin', scrollbarColor: '#333 #111' }}>
-        <canvas ref={canvasRef} width={CW} height={CH} style={{ display: 'block' }} />
-      </div>
-
-      {/* Control panel */}
-      <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Score */}
-        <div style={{ background: '#111', borderRadius: '16px', padding: '18px', textAlign: 'center', border: '1px solid #ffd70033' }}>
-          <div style={{ color: '#888', fontSize: '0.75rem', marginBottom: '4px', fontWeight: 700 }}>💎 JACKPOT</div>
-          <div style={{ color: '#ffd700', fontSize: '2.6rem', fontWeight: 900, textShadow: '0 0 24px #ffd700aa' }}>{totalScore}</div>
-          <div style={{ color: '#555', fontSize: '0.72rem', marginTop: '4px' }}>공 {ballCount}개 발사됨</div>
-        </div>
-
-        {/* 공 이름 입력 */}
-        <div style={{ background: '#111', borderRadius: '12px', padding: '12px', border: '1px solid #333' }}>
-          <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px' }}>🎱 공 추가</div>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <input
-              value={newBallName}
-              onChange={e => setNewBallName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && enqueueBall(newBallName)}
-              placeholder="이름 입력"
-              style={{ flex: 1, background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', padding: '6px 8px', fontSize: '0.8rem', outline: 'none' }}
-            />
-            <button onClick={() => enqueueBall(newBallName)} style={{ background: '#00ffa322', border: '1px solid #00ffa344', color: '#00ffa3', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontWeight: 900 }}>+</button>
-          </div>
-        </div>
-
-        {/* 대기 목록 */}
-        {pending.length > 0 && (
-          <div style={{ background: '#0a0a0a', borderRadius: '12px', padding: '10px', border: '1px solid #222', maxHeight: '180px', overflowY: 'auto' }}>
-            <div style={{ color: '#666', fontSize: '0.72rem', fontWeight: 700, marginBottom: '6px' }}>대기 중 ({pending.length})</div>
-            {pending.map((p, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.color, boxShadow: `0 0 6px ${p.color}` }} />
-                  <span style={{ color: '#ccc', fontSize: '0.78rem' }}>{p.name}</span>
-                </div>
-                <button onClick={() => removePending(i)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.75rem', padding: '0 4px' }}>✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 출발 버튼 */}
-        <button onClick={launchAll} disabled={pending.length === 0}
-          style={{ cursor: pending.length > 0 ? 'pointer' : 'default', width: '100%', padding: '13px', borderRadius: '12px', border: 'none', background: pending.length > 0 ? 'linear-gradient(90deg,#ff6b6b,#ff922b)' : '#222', color: pending.length > 0 ? 'white' : '#444', fontWeight: 900, fontSize: '1rem', transition: 'all 0.2s' }}>
-          🚀 출발하기 {pending.length > 0 ? `(${pending.length}개)` : ''}
-        </button>
-
-        <button onClick={resetGame} style={btnStyle('#ff4b4b')}>🔄 초기화</button>
-
-        {/* Legend */}
-        <div style={{ background: '#0a0a0a', borderRadius: '12px', padding: '12px', border: '1px solid #1a1a1a', fontSize: '0.75rem' }}>
-          <div style={{ color: '#666', fontWeight: 900, marginBottom: '8px' }}>장애물 종류</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ color: '#8090c0' }}>⚪ 핀 — 기본 튕김</div>
-            <div style={{ color: '#ff6b6b' }}>🔴 범퍼 — 강한 반발</div>
-            <div style={{ color: '#00ffa3' }}>📐 램프 — 방향 유도</div>
-            <div style={{ color: '#cc5de8' }}>🌀 스피너 — 회전 막대</div>
-          </div>
-        </div>
-
-        {/* Jackpot count */}
-        <div style={{ background: '#ffd70011', borderRadius: '12px', padding: '12px', border: '1px solid #ffd70033', textAlign: 'center' }}>
-          <div style={{ color: '#ffd700', fontSize: '0.75rem', fontWeight: 900, marginBottom: '4px' }}>JACKPOT 횟수</div>
-          <div style={{ color: '#ffd700', fontSize: '1.8rem', fontWeight: 900 }}>{goals.find(g => g.pts > 0)?.count ?? 0}</div>
-          <div style={{ color: '#555', fontSize: '0.7rem', marginTop: '4px' }}>꽝: {goals.filter(g => g.pts === 0).reduce((s, g) => s + g.count, 0)}회</div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─────────────────────────────────────────────
 // OBS 오버레이용 사운드 재생 (AudioContext — autoplay 정책 우회)

@@ -301,12 +301,12 @@ const PlayerChip: React.FC<{ name: string; member: string; isWinner: boolean; co
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     background: isWinner ? `${color}15` : '#111',
     border: `1px solid ${isWinner ? color + '66' : '#222'}`,
-    borderRadius: '10px', padding: '8px 14px', minWidth: '100px',
+    borderRadius: '10px', padding: '6px 14px', minWidth: '100px', maxWidth: '200px',
     transition: 'all 0.2s',
   }}>
-    {isWinner && <span style={{ fontSize: '0.7rem', color: color, fontWeight: 700, marginBottom: '2px' }}>🏆 승리</span>}
-    <span style={{ fontWeight: 800, fontSize: '1rem', color: isWinner ? '#fff' : '#888' }}>{name}</span>
-    <span style={{ fontSize: '0.75rem', color: '#555' }}>{member}</span>
+    {isWinner && <span style={{ fontSize: '0.65rem', color: color, fontWeight: 700, marginBottom: '2px' }}>🏆 승리</span>}
+    <span style={{ fontWeight: 800, fontSize: '1rem', color: isWinner ? '#fff' : '#888', width: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={name}>{name}</span>
+    <span style={{ fontSize: '0.78rem', color: '#555', width: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member}</span>
   </div>
 );
 
