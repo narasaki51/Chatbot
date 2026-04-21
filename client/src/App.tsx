@@ -6,6 +6,8 @@ import RatingViewer from './RatingViewer';
 import QuizShow from './QuizShow';
 import QuizOverlay from './QuizOverlay';
 import Tournament from './Tournament';
+import DungeonMaker from './DungeonMaker';
+
 
 
 // 접속한 호스트명을 유지하면서 포트만 변경하여 범용적인 서버 주소 생성
@@ -13,7 +15,7 @@ const IS_DEV = window.location.port === '5173';
 const SOCKET_URL = IS_DEV ? `http://${window.location.hostname}:4000` : '';
 const socket = io(SOCKET_URL);
 
-interface UserAuth {
+export interface UserAuth {
   name: string;
   role: 'admin' | 'host' | 'member' | 'guest';
   chnnelid?: string;
@@ -72,7 +74,7 @@ const AppMain: React.FC = () => {
     } catch { }
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament' | 'dungeon'>('dashboard');
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(false);
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
@@ -272,6 +274,10 @@ const AppMain: React.FC = () => {
               <button onClick={() => setView('quiz')} style={{ background: view === 'quiz' ? '#222' : 'transparent', color: view === 'quiz' ? '#f59e0b' : '#666', border: '1px solid', borderColor: view === 'quiz' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏆 퀴즈쇼</button>
               <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
               <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
+              {user.role === 'admin' && (
+                <button onClick={() => setView('dungeon')} style={{ background: view === 'dungeon' ? '#222' : 'transparent', color: view === 'dungeon' ? '#6366f1' : '#666', border: '1px solid', borderColor: view === 'dungeon' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏰 던전메이커</button>
+              )}
+
 
             </div>
           )}
@@ -455,6 +461,8 @@ const AppMain: React.FC = () => {
                             <QuizShow user={user!} />
                             ) : view === 'tournament' ? (
                               <Tournament user={user!} />
+                            ) : view === 'dungeon' ? (
+                              <DungeonMaker user={user!} />
           ) : (
             <RouletteGame key="roul-comp-last" user={user!} />
           )}
