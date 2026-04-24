@@ -7,6 +7,7 @@ import QuizShow from './QuizShow';
 import QuizOverlay from './QuizOverlay';
 import Tournament from './Tournament';
 import DungeonMaker from './DungeonMaker';
+import TowerDefense from './TowerDefense';
 
 
 
@@ -74,7 +75,7 @@ const AppMain: React.FC = () => {
     } catch { }
     return null;
   });
-  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament' | 'dungeon'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'ladder' | 'roulette' | 'group' | 'sentiment' | 'chatbot' | 'rating' | 'pok_roulette' | 'feedback' | 'quiz' | 'tournament' | 'dungeon' | 'tower'>('dashboard');
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(false);
   const [missions, setMissions] = useState<any[]>([]);
   const [isDonationOnly, setIsDonationOnly] = useState(true);
@@ -275,7 +276,10 @@ const AppMain: React.FC = () => {
               <button onClick={() => setView('feedback')} style={{ background: view === 'feedback' ? '#222' : 'transparent', color: view === 'feedback' ? '#ff6a00' : '#666', border: '1px solid', borderColor: view === 'feedback' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>💡 피드백&건의</button>
               <button onClick={() => setView('chatbot')} style={{ background: view === 'chatbot' ? '#222' : 'transparent', color: view === 'chatbot' ? '#ffbd2e' : '#666', border: '1px solid', borderColor: view === 'chatbot' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🐹 찌모채팅봇</button>
               {user.role === 'admin' && (
-                <button onClick={() => setView('dungeon')} style={{ background: view === 'dungeon' ? '#222' : 'transparent', color: view === 'dungeon' ? '#6366f1' : '#666', border: '1px solid', borderColor: view === 'dungeon' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏰 던전메이커</button>
+                <>
+                  <button onClick={() => setView('dungeon')} style={{ background: view === 'dungeon' ? '#222' : 'transparent', color: view === 'dungeon' ? '#6366f1' : '#666', border: '1px solid', borderColor: view === 'dungeon' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🏰 던전메이커</button>
+                  <button onClick={() => setView('tower')} style={{ background: view === 'tower' ? '#222' : 'transparent', color: view === 'tower' ? '#00ffa3' : '#666', border: '1px solid', borderColor: view === 'tower' ? '#333' : 'transparent', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 900 }}>🛡️ 타워디펜스</button>
+                </>
               )}
 
 
@@ -463,6 +467,8 @@ const AppMain: React.FC = () => {
                               <Tournament user={user!} />
                             ) : view === 'dungeon' ? (
                               <DungeonMaker user={user!} />
+                              ) : view === 'tower' ? (
+                                <TowerDefense user={user!} />
           ) : (
             <RouletteGame key="roul-comp-last" user={user!} />
           )}

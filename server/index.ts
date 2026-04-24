@@ -30,11 +30,15 @@ const DB_PATH = path.join(__dirname, 'missions_db.json');
 if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify([]));
 const FEEDBACK_DB_PATH = path.join(__dirname, 'feedback_db.json');
 if (!fs.existsSync(FEEDBACK_DB_PATH)) fs.writeFileSync(FEEDBACK_DB_PATH, JSON.stringify([]));
+const TOWER_MAP_DB_PATH = path.join(__dirname, 'tower_map_db.json');
+if (!fs.existsSync(TOWER_MAP_DB_PATH)) fs.writeFileSync(TOWER_MAP_DB_PATH, JSON.stringify(null));
 
 const getMissions = () => JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 const saveMissions = (missions: any) => fs.writeFileSync(DB_PATH, JSON.stringify(missions));
 const getFeedbacks = () => JSON.parse(fs.readFileSync(FEEDBACK_DB_PATH, 'utf-8'));
 const saveFeedbacks = (data: any) => fs.writeFileSync(FEEDBACK_DB_PATH, JSON.stringify(data, null, 2));
+const getTowerMap = () => JSON.parse(fs.readFileSync(TOWER_MAP_DB_PATH, 'utf-8'));
+const saveTowerMap = (data: any) => fs.writeFileSync(TOWER_MAP_DB_PATH, JSON.stringify(data, null, 2));
 
 // 접속 기록 로그 저장 기능
 const ACCESS_LOG_PATH = path.join(__dirname, 'access_log.txt');
@@ -646,7 +650,7 @@ app.post('/quiz/reset', (req, res) => {
 });
 
 // [최적화된 Catch-all] API 경로가 아닌 요청만 React로 전달
-const API_PREFIXES = ['/missions', '/login', '/log-access', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz', '/tournament'];
+const API_PREFIXES = ['/missions', '/login', '/log-access', '/users-config', '/sentiment', '/connected-members', '/connect-member', '/disconnect-member', '/test-', '/cheese-enabled', '/donation-only', '/mission-donation-only', '/auto-accept', '/rating', '/feedbacks', '/quiz', '/tournament', '/tower-map'];
 
 app.use((req, res, next) => {
   const isApi = API_PREFIXES.some(prefix => req.path.startsWith(prefix));
@@ -783,6 +787,16 @@ app.delete('/pok-roulette-state', (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'DB Reset Error' });
   }
+});
+
+// ==================== 타워 디펜스 맵 API ====================
+app.get('/tower-map', (req, res) => {
+  res.json(getTowerMap());
+});
+
+app.post('/tower-map', (req, res) => {
+  saveTowerMap(req.body);
+  res.json({ success: true });
 });
 
 // ==================== 레이팅 보드 ====================

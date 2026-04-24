@@ -79,6 +79,96 @@
       "winnerMember": "갱쥰",
       "winnerRatingAfter": 1050,
       "recordedAt": "2026-04-14T12:55:30.159Z"
+    },
+    {
+      "type": "register",
+      "characterId": "1776241733271_xrcg9",
+      "memberName": "말구",
+      "characterName": "무관이순신",
+      "jobName": "워로드",
+      "league": "4000",
+      "score": 4500,
+      "registeredAt": "2026-04-15T08:28:53.271Z"
+    },
+    {
+      "type": "register",
+      "characterId": "1776327404558_wzbx3",
+      "memberName": "게스트",
+      "characterName": "이카사란",
+      "jobName": "버서커",
+      "league": "extra",
+      "score": 2500,
+      "registeredAt": "2026-04-16T08:16:44.558Z"
+    },
+    {
+      "type": "register",
+      "characterId": "1776327417822_7fhcr",
+      "memberName": "게스트",
+      "characterName": "슈퍼찌모",
+      "jobName": "갈증",
+      "league": "extra",
+      "score": 1500,
+      "registeredAt": "2026-04-16T08:16:57.822Z"
+    },
+    {
+      "type": "result",
+      "battleId": "b_1776328119433_1llp",
+      "league": "extra",
+      "challengerName": "슈퍼찌모",
+      "challengerMember": "게스트",
+      "defenderName": "이카사란",
+      "defenderMember": "게스트",
+      "winnerName": "이카사란",
+      "winnerMember": "게스트",
+      "loserName": "슈퍼찌모",
+      "loserMember": "게스트",
+      "ratingChange": 20,
+      "winnerRatingAfter": 1020,
+      "loserRatingAfter": 980,
+      "recordedAt": "2026-04-16T08:28:41.331Z"
+    },
+    {
+      "type": "deleted",
+      "battleId": "b_1776328151127_p9cy",
+      "league": "4000",
+      "challengerName": "갱쥰",
+      "challengerMember": "갱쥰",
+      "defenderName": "슈퍼찌모",
+      "defenderMember": "찌모",
+      "originalStatus": "pending",
+      "winnerId": null,
+      "winnerName": null,
+      "ratingChange": 20,
+      "deletedAt": "2026-04-16T08:30:42.060Z"
+    },
+    {
+      "type": "deleted",
+      "battleId": "b_1776325779685_66yb",
+      "league": "4000",
+      "challengerName": "갱쥰",
+      "challengerMember": "갱쥰",
+      "defenderName": "무관이순신",
+      "defenderMember": "말구",
+      "originalStatus": "pending",
+      "winnerId": null,
+      "winnerName": null,
+      "ratingChange": 20,
+      "deletedAt": "2026-04-16T08:30:44.282Z"
+    },
+    {
+      "type": "result_triple",
+      "battleId": "b_1776328319054_swmj",
+      "league": "4000",
+      "challengerName": "갱쥰",
+      "challengerMember": "갱쥰",
+      "defenderName": "무관이순신",
+      "defenderMember": "말구",
+      "intruderName": "슈퍼찌모",
+      "intruderMember": "찌모",
+      "winnerName": "갱쥰",
+      "winnerMember": "갱쥰",
+      "winnerRatingAfter": 1100,
+      "recordedAt": "2026-04-16T08:32:06.214Z"
     }
   ]
 }

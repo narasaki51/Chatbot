@@ -4,6 +4,7 @@ import { Sparkles, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BUILDERS } from './DungeonBuilders';
 import type { Builder } from './DungeonBuilders';
+import DungeonEditor from './DungeonEditor';
 
 interface DungeonMakerProps {
   user: UserAuth;
@@ -11,8 +12,23 @@ interface DungeonMakerProps {
 
 const DungeonMaker: React.FC<DungeonMakerProps> = ({ user }) => {
   const [selectedBuilderId, setSelectedBuilderId] = useState<string | null>(null);
+  const [gameState, setGameState] = useState<'lobby' | 'editing'>('lobby');
 
   const selectedBuilder = BUILDERS.find(b => b.id === selectedBuilderId);
+
+  const handleStart = () => {
+    if (selectedBuilder) {
+      setGameState('editing');
+    }
+  };
+
+  if (gameState === 'editing' && selectedBuilder) {
+    return (
+      <div style={{ padding: '20px', maxWidth: '1440px', margin: '0 auto' }}>
+        <DungeonEditor builder={selectedBuilder} onBack={() => setGameState('lobby')} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '20px', color: 'white', maxWidth: '1200px', margin: '0 auto', minHeight: '80vh' }}>
@@ -166,6 +182,7 @@ const DungeonMaker: React.FC<DungeonMakerProps> = ({ user }) => {
             }}
           >
             <button
+              onClick={handleStart}
               style={{
                 background: `linear-gradient(45deg, ${selectedBuilder?.color}, #a855f7)`,
                 color: 'white',
